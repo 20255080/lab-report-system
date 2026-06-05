@@ -4,33 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0">
     <title>BLESS Lab Report System</title>
-    
-    <!-- PWA Meta Tags -->
     <meta name="description" content="연구실 업무 보고 및 시간표 관리 시스템">
     <meta name="theme-color" content="#2c3e50">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="BLESS Lab">
-    
-    <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
-    
-    <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="icon.svg">
     <link rel="apple-touch-icon" href="icon.svg">
-    
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/timetable.css">
-    
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-    
-    <!-- Firebase 설정 (직접 포함) -->
     <script>
-        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyCW_KaEpbBhgyoTPvb_koMrntlInu35ak4",
             authDomain: "bless-lab.firebaseapp.com",
@@ -40,218 +28,231 @@
             appId: "1:492042770903:web:d75a65938f9601b2f19392",
             measurementId: "G-0G6HQTLZ3L"
         };
-        
-        // Firebase 초기화
         firebase.initializeApp(firebaseConfig);
-        
-        // Firestore 데이터베이스 참조
         const db = firebase.firestore();
-        
-        // Firebase Storage 참조
         const storage = firebase.storage();
         const storageRef = storage.ref();
-        
-        console.log('✅ Firebase 초기화 완료 (index.html)');
     </script>
-    
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Firebase DB 헬퍼 -->
     <script src="js/firebase-db.js"></script>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Lab Work Report System</h1>
-            <p class="subtitle">Biotechnology Laboratory for Environmental Sustainability and Survivability (BLESS)</p>
+    <div class="app-root">
+
+        <!-- ══ 앱 헤더 ══════════════════════════════════════ -->
+        <header class="app-header">
+            <div class="header-inner">
+                <div class="header-title-group">
+                    <span class="header-logo">🔬</span>
+                    <div>
+                        <div class="header-title">BLESS Lab</div>
+                        <div class="header-subtitle">업무 보고 시스템</div>
+                    </div>
+                </div>
+            </div>
         </header>
 
-        <nav class="tab-menu">
-            <button class="tab-btn active" data-tab="student">Submit Report</button>
-            <button class="tab-btn" data-tab="professor">View All</button>
-            <button class="tab-btn" data-tab="timetable">Timetable</button>
-            <button class="tab-btn" data-tab="calendar">Calendar</button>
+        <!-- ══ 탭 메뉴 ══════════════════════════════════════ -->
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="submit" onclick="switchTab('submit')">
+                <span class="tab-icon">✏️</span>
+                <span class="tab-label">보고서 제출</span>
+            </button>
+            <button class="tab-btn" data-tab="viewall" onclick="switchTab('viewall')">
+                <span class="tab-icon">📋</span>
+                <span class="tab-label">전체 조회</span>
+            </button>
+            <button class="tab-btn" data-tab="timetable" onclick="switchTab('timetable')">
+                <span class="tab-icon">📅</span>
+                <span class="tab-label">시간표</span>
+            </button>
+            <button class="tab-btn" data-tab="calendar" onclick="switchTab('calendar')">
+                <span class="tab-icon">🗓️</span>
+                <span class="tab-label">캘린더</span>
+            </button>
         </nav>
 
-        <!-- 학생 보고 입력 탭 -->
-        <div id="student-tab" class="tab-content active">
-            <div class="form-section">
-                <h2>Daily Work Report</h2>
-                
-                <div class="form-group">
-                    <label for="student-select">Name *</label>
-                    <select id="student-select" required>
-                        <option value="">Select</option>
-                    </select>
+        <!-- ══ 탭 콘텐츠 ════════════════════════════════════ -->
+        <main class="tab-content-area">
+
+            <!-- ── 보고서 제출 탭 ─────────────────────────── -->
+            <div id="tab-submit" class="tab-pane active">
+
+                <!-- 일일/주간 서브탭 -->
+                <div class="subtab-bar">
+                    <button class="subtab-btn active" id="subtab-daily-btn" onclick="switchSubTab('daily')">일일 보고서</button>
+                    <button class="subtab-btn" id="subtab-weekly-btn" onclick="switchSubTab('weekly')">주간 보고서</button>
                 </div>
 
-                <div class="form-group">
-                    <label for="report-date">Date *</label>
-                    <input type="date" id="report-date" required>
+                <!-- 일일 보고서 -->
+                <div id="subtab-daily" class="subtab-pane active">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">📝</span>
+                            <h2 class="card-title">일일 업무 보고서</h2>
+                        </div>
+                        <div class="form-body">
+                            <div class="form-row">
+                                <label class="form-label">이름 <span class="required">*</span></label>
+                                <select id="student-select" class="form-select">
+                                    <option value="">선택하세요</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">날짜 <span class="required">*</span></label>
+                                <input type="date" id="report-date" class="form-input">
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">업무 내용 <span class="required">*</span></label>
+                                <textarea id="today-work" class="form-textarea" rows="7" placeholder="수행한 업무를 자세히 입력해주세요"></textarea>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">소요 시간 <span class="required">*</span></label>
+                                <input type="text" id="work-hours" class="form-input" placeholder="예: 3시간, 오전 2h + 오후 4h">
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">비고</label>
+                                <textarea id="notes" class="form-textarea" rows="3" placeholder="특이사항이 있으면 입력해주세요"></textarea>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-primary" onclick="saveDailyReportFromForm()">💾 저장</button>
+                                <button class="btn btn-secondary" onclick="loadTodayReport()">📂 불러오기</button>
+                            </div>
+                        </div>
+                        <!-- 피드백 영역 -->
+                        <div id="daily-feedback-area" class="feedback-area" style="display:none;">
+                            <div class="feedback-header">
+                                <span class="feedback-icon">💬</span>
+                                <span class="feedback-title">교수님 피드백</span>
+                            </div>
+                            <div id="daily-feedback-list" class="feedback-list"></div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="today-work">Work Description *</label>
-                    <textarea id="today-work" rows="8" placeholder="Enter detailed description of work performed" required></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="work-hours">Hours Spent *</label>
-                    <input type="text" id="work-hours" placeholder="e.g., 3 hours, 2h morning + 4h afternoon" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="notes">Notes</label>
-                    <textarea id="notes" rows="3" placeholder="Enter any special notes if applicable"></textarea>
-                </div>
-
-                <div class="button-group">
-                    <button id="save-daily-btn" class="btn btn-primary">Save</button>
-                    <button id="load-today-btn" class="btn btn-secondary">Load Today's Work</button>
-                </div>
-
-                <!-- 피드백 확인 영역 -->
-                <div id="daily-feedback-container" class="feedback-container" style="display: none;">
-                    <h3>Professor Feedback</h3>
-                    <div id="daily-feedback-content" class="feedback-content"></div>
+                <!-- 주간 보고서 -->
+                <div id="subtab-weekly" class="subtab-pane">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">📊</span>
+                            <h2 class="card-title">주간 업무 보고서</h2>
+                        </div>
+                        <div class="form-body">
+                            <div class="form-row">
+                                <label class="form-label">이름 <span class="required">*</span></label>
+                                <select id="weekly-student-select" class="form-select">
+                                    <option value="">선택하세요</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">주 기준 날짜 <span class="required">*</span></label>
+                                <input type="date" id="weekly-date" class="form-input">
+                                <div class="form-hint" id="week-info"></div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">주간 업무 요약 <span class="required">*</span></label>
+                                <textarea id="weekly-summary" class="form-textarea" rows="8" placeholder="이번 주 수행한 주요 업무를 입력해주세요"></textarea>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-primary" onclick="saveWeeklySummaryFromForm()">💾 저장</button>
+                                <button class="btn btn-secondary" onclick="loadThisWeekSummary()">📂 불러오기</button>
+                            </div>
+                        </div>
+                        <!-- 피드백 영역 -->
+                        <div id="weekly-feedback-area" class="feedback-area" style="display:none;">
+                            <div class="feedback-header">
+                                <span class="feedback-icon">💬</span>
+                                <span class="feedback-title">교수님 피드백</span>
+                            </div>
+                            <div id="weekly-feedback-list" class="feedback-list"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="form-section">
-                <h2>Weekly Work Report</h2>
-                
-                <div class="form-group">
-                    <label for="weekly-student-select">Name *</label>
-                    <select id="weekly-student-select" required>
-                        <option value="">Select</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="weekly-date">Week Reference Date *</label>
-                    <input type="date" id="weekly-date" required>
-                    <small id="week-info" class="info-text"></small>
-                </div>
-
-                <div class="form-group">
-                    <label for="weekly-summary">Weekly Work Summary *</label>
-                    <textarea id="weekly-summary" rows="8" placeholder="Enter the main work performed this week" required></textarea>
-                </div>
-
-                <div class="button-group">
-                    <button id="save-weekly-btn" class="btn btn-primary">Save</button>
-                    <button id="load-weekly-btn" class="btn btn-secondary">Load This Week's Work</button>
-                </div>
-
-                <!-- 피드백 확인 영역 -->
-                <div id="weekly-feedback-container" class="feedback-container" style="display: none;">
-                    <h3>Professor Feedback</h3>
-                    <div id="weekly-feedback-content" class="feedback-content"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 교수 조회 탭 -->
-        <div id="professor-tab" class="tab-content">
-            <div class="form-section">
-                <h2>View Work Records</h2>
-                
-                <div class="filter-group">
-                    <div class="form-group">
-                        <label for="view-student-select">Select Member *</label>
-                        <select id="view-student-select" required>
-                            <option value="">All Members</option>
-                        </select>
+            <!-- ── 전체 조회 탭 ─────────────────────────── -->
+            <div id="tab-viewall" class="tab-pane">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">🔍</span>
+                        <h2 class="card-title">보고서 조회</h2>
                     </div>
-
-                    <div class="form-group">
-                        <label for="view-type">View Type *</label>
-                        <select id="view-type" required>
-                            <option value="daily">Daily Report</option>
-                            <option value="weekly">Weekly Summary</option>
-                        </select>
+                    <div class="form-body filter-form">
+                        <div class="filter-row">
+                            <div class="form-row flex-1">
+                                <label class="form-label">구성원</label>
+                                <select id="view-student-select" class="form-select">
+                                    <option value="">전체 구성원</option>
+                                </select>
+                            </div>
+                            <div class="form-row flex-1">
+                                <label class="form-label">조회 유형</label>
+                                <select id="view-type" class="form-select" onchange="onViewTypeChange()">
+                                    <option value="daily">일일 보고서</option>
+                                    <option value="weekly">주간 요약</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="filter-row" id="date-filter-row">
+                            <div class="form-row flex-1">
+                                <label class="form-label">시작 날짜</label>
+                                <input type="date" id="view-start-date" class="form-input">
+                            </div>
+                            <div class="form-row flex-1">
+                                <label class="form-label">종료 날짜</label>
+                                <input type="date" id="view-end-date" class="form-input">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary full-width" onclick="searchReports()">🔍 검색</button>
                     </div>
-
-                    <div class="form-group" id="date-filter-group">
-                        <label for="view-start-date">Start Date</label>
-                        <input type="date" id="view-start-date">
-                    </div>
-
-                    <div class="form-group" id="date-filter-group-2">
-                        <label for="view-end-date">End Date</label>
-                        <input type="date" id="view-end-date">
-                    </div>
-
-                    <button id="search-btn" class="btn btn-primary">Search</button>
                 </div>
-
                 <div id="results-container">
-                    <div class="no-data">Select search criteria and click the Search button</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Timetable Tab -->
-        <div id="timetable-tab" class="tab-content">
-            <div class="form-section">
-                <h2>BLESS Timetable - 1st Semester, 2026</h2>
-                
-                <div class="timetable-controls">
-                    <div class="form-group">
-                        <label for="member-filter">Select Member</label>
-                        <select id="member-filter">
-                            <option value="">All Members</option>
-                        </select>
+                    <div class="empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <div class="empty-text">검색 조건을 설정하고 검색 버튼을 눌러주세요.</div>
                     </div>
                 </div>
-                
-                <div class="timetable-container">
-                    <!-- Timetable image will be rendered here -->
-                    <div id="timetable-display"></div>
+            </div>
+
+            <!-- ── 시간표 탭 ─────────────────────────────── -->
+            <div id="tab-timetable" class="tab-pane">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-icon">📅</span>
+                        <h2 class="card-title">BLESS 시간표 — 2026년 1학기</h2>
+                    </div>
+                    <div class="timetable-filter">
+                        <label class="form-label">구성원 선택</label>
+                        <select id="member-filter" class="form-select" onchange="renderTimetable(this.value)">
+                            <option value="">전체 보기</option>
+                        </select>
+                    </div>
+                    <div id="timetable-display" class="timetable-container"></div>
                 </div>
             </div>
-        </div>
-        
-        <!-- Calendar Tab -->
-        <div id="calendar-tab" class="tab-content">
-            <div class="form-section">
-                <h2>Work Report Calendar</h2>
-                
-                <div class="calendar-container">
-                    <!-- Monthly calendar will be rendered here -->
+
+            <!-- ── 캘린더 탭 ─────────────────────────────── -->
+            <div id="tab-calendar" class="tab-pane">
+                <div class="card no-padding">
                     <div id="monthly-calendar"></div>
                 </div>
             </div>
-        </div>
+
+        </main>
+
+        <!-- ══ 토스트 메시지 ════════════════════════════════ -->
+        <div id="toast" class="toast"></div>
+
     </div>
 
-    <!-- JavaScript는 Firebase SDK 이후에 로드 -->
     <script src="js/main-firebase.js"></script>
     <script src="js/timetable.js"></script>
-    
-    <!-- PWA Service Worker Registration -->
     <script>
-        // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then((registration) => {
-                        console.log('✅ Service Worker registered:', registration.scope);
-                    })
-                    .catch((error) => {
-                        console.log('❌ Service Worker registration failed:', error);
-                    });
+                navigator.serviceWorker.register('/service-worker.js').catch(() => {});
             });
         }
-        
-        // PWA Install prompt
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            console.log('💡 PWA can be installed');
-        });
     </script>
 </body>
 </html>

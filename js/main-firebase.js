@@ -1,16 +1,24 @@
-// Global state
+// =====================================================================
+// BLESS Lab Report System — main-firebase.js
+// Flutter 앱과 동일한 기능: 탭·서브탭 전환, 보고서 CRUD,
+// 피드백 CRUD, 전체 조회, 토스트 메시지
+// =====================================================================
+
+// ── 전역 상태 ──────────────────────────────────────────────────────
 let students = [];
 let currentStudentId = '';
 let currentWeeklyStudentId = '';
 let currentDailyReportId = '';
 let currentWeeklyReportId = '';
+let currentSubTab = 'daily';   // 'daily' | 'weekly'
+let toastTimer = null;
 
-// Date utilities
+// ── 날짜 유틸 ──────────────────────────────────────────────────────
 function formatDate(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }
 
 function getWeekNumber(date) {
@@ -25,140 +33,176 @@ function getWeekNumber(date) {
 function getWeekRange(date) {
     const d = new Date(date);
     const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
     const monday = new Date(d.setDate(diff));
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
     return `${formatDate(monday)} ~ ${formatDate(sunday)}`;
 }
 
-// Initialization
-document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize Firebase student data
-    await initializeStudents();
-    
-    // Set today's date
-    const today = formatDate(new Date());
-    document.getElementById('report-date').value = today;
-    document.getElementById('weekly-date').value = today;
-    document.getElementById('view-start-date').value = today;
-    document.getElementById('view-end-date').value = today;
+// ── 토스트 메시지 ──────────────────────────────────────────────────
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
 
-    // Load student list
-    await loadStudents();
+    toast.textContent = message;
+    toast.className = `toast toast-${type} show`;
 
-    // Tab switch event
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const tab = btn.dataset.tab;
-            switchTab(tab);
-        });
-    });
-
-    // Student selection event
-    document.getElementById('student-select').addEventListener('change', (e) => {
-        currentStudentId = e.target.value;
-        // Auto-fill if date is already selected
-        const reportDate = document.getElementById('report-date').value;
-        if (currentStudentId && reportDate) {
-            const student = students.find(s => s.id === currentStudentId);
-            if (student && typeof autoFillDailyReport !== 'undefined') {
-                autoFillDailyReport(student.name, reportDate);
-            }
-        }
-    });
-
-    document.getElementById('weekly-student-select').addEventListener('change', (e) => {
-        currentWeeklyStudentId = e.target.value;
-    });
-    
-    // Date selection - auto-fill when changed
-    document.getElementById('report-date').addEventListener('change', (e) => {
-        const reportDate = e.target.value;
-        if (currentStudentId && reportDate) {
-            const student = students.find(s => s.id === currentStudentId);
-            if (student && typeof autoFillDailyReport !== 'undefined') {
-                autoFillDailyReport(student.name, reportDate);
-            }
-        }
-    });
-
-    // Update week information
-    document.getElementById('weekly-date').addEventListener('change', (e) => {
-        updateWeekInfo(e.target.value);
-    });
-    updateWeekInfo(today);
-
-    // Save daily report
-    document.getElementById('save-daily-btn').addEventListener('click', saveDailyReportFromForm);
-
-    // Load today's report
-    document.getElementById('load-today-btn').addEventListener('click', loadTodayReport);
-
-    // Save weekly summary
-    document.getElementById('save-weekly-btn').addEventListener('click', saveWeeklySummaryFromForm);
-
-    // Load this week's summary
-    document.getElementById('load-weekly-btn').addEventListener('click', loadThisWeekSummary);
-
-    // Search button
-    document.getElementById('search-btn').addEventListener('click', searchReports);
-});
-
-// 탭 전환
-function switchTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-
-    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-    document.getElementById(`${tab}-tab`).classList.add('active');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
 }
 
-// Load student list
+// showMessage는 showToast의 별칭 (하위 호환)
+function showMessage(text, type) {
+    showToast(text, type === 'error' ? 'error' : 'success');
+}
+
+// ── 탭 전환 ──────────────────────────────────────────────────────
+function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+        pane.classList.toggle('active', pane.id === `tab-${tab}`);
+    });
+
+    // 캘린더 탭 진입 시 렌더링
+    if (tab === 'calendar' && typeof renderCalendar === 'function') {
+        renderCalendar();
+    }
+    // 시간표 탭 진입 시 렌더링
+    if (tab === 'timetable' && typeof renderTimetable === 'function') {
+        renderTimetable('');
+    }
+}
+
+// ── 서브탭 전환 (일일 / 주간) ─────────────────────────────────────
+function switchSubTab(subTab) {
+    currentSubTab = subTab;
+
+    document.getElementById('subtab-daily-btn').classList.toggle('active', subTab === 'daily');
+    document.getElementById('subtab-weekly-btn').classList.toggle('active', subTab === 'weekly');
+    document.getElementById('subtab-daily').classList.toggle('active', subTab === 'daily');
+    document.getElementById('subtab-weekly').classList.toggle('active', subTab === 'weekly');
+}
+
+// ── onViewTypeChange (조회 유형 변경 시 날짜 필터 표시 여부) ─────
+function onViewTypeChange() {
+    const viewType = document.getElementById('view-type').value;
+    const dateRow = document.getElementById('date-filter-row');
+    if (dateRow) {
+        dateRow.style.display = viewType === 'daily' ? '' : 'none';
+    }
+}
+
+// ── 초기화 ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+    await initializeStudents();
+
+    const today = formatDate(new Date());
+    const ids = ['report-date', 'weekly-date', 'view-start-date', 'view-end-date'];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = today;
+    });
+
+    await loadStudents();
+
+    // 이름 선택 → 기존 보고서 자동 조회
+    const studentSelect = document.getElementById('student-select');
+    if (studentSelect) {
+        studentSelect.addEventListener('change', (e) => {
+            currentStudentId = e.target.value;
+            const reportDate = document.getElementById('report-date').value;
+            if (currentStudentId && reportDate) {
+                const student = students.find(s => s.id === currentStudentId);
+                if (student && typeof autoFillDailyReport !== 'undefined') {
+                    autoFillDailyReport(student.name, reportDate);
+                }
+            }
+        });
+    }
+
+    const weeklyStudentSelect = document.getElementById('weekly-student-select');
+    if (weeklyStudentSelect) {
+        weeklyStudentSelect.addEventListener('change', (e) => {
+            currentWeeklyStudentId = e.target.value;
+        });
+    }
+
+    // 날짜 변경 시 자동 채우기
+    const reportDateEl = document.getElementById('report-date');
+    if (reportDateEl) {
+        reportDateEl.addEventListener('change', (e) => {
+            if (currentStudentId) {
+                const student = students.find(s => s.id === currentStudentId);
+                if (student && typeof autoFillDailyReport !== 'undefined') {
+                    autoFillDailyReport(student.name, e.target.value);
+                }
+            }
+        });
+    }
+
+    // 주간 날짜 변경 시 주차 정보 갱신
+    const weeklyDateEl = document.getElementById('weekly-date');
+    if (weeklyDateEl) {
+        weeklyDateEl.addEventListener('change', (e) => updateWeekInfo(e.target.value));
+    }
+    updateWeekInfo(today);
+});
+
+// ── 학생 목록 로드 ─────────────────────────────────────────────
 async function loadStudents() {
     try {
         students = await getStudents();
 
-        const studentSelect = document.getElementById('student-select');
-        const weeklyStudentSelect = document.getElementById('weekly-student-select');
-        const viewStudentSelect = document.getElementById('view-student-select');
+        const selects = {
+            'student-select': students,
+            'weekly-student-select': students,
+            'view-student-select': students,
+            'member-filter': students
+        };
 
-        students.forEach(student => {
-            const option1 = document.createElement('option');
-            option1.value = student.id;
-            option1.textContent = student.name;
-            studentSelect.appendChild(option1);
+        Object.entries(selects).forEach(([id, list]) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            // 기존 옵션 유지 (첫 번째 "선택하세요" / "전체 보기" 등)
+            const firstOption = el.options[0];
+            el.innerHTML = '';
+            if (firstOption) el.appendChild(firstOption);
 
-            const option2 = document.createElement('option');
-            option2.value = student.id;
-            option2.textContent = student.name;
-            weeklyStudentSelect.appendChild(option2);
-
-            const option3 = document.createElement('option');
-            option3.value = student.id;
-            option3.textContent = student.name;
-            viewStudentSelect.appendChild(option3);
+            list.forEach(student => {
+                const opt = document.createElement('option');
+                opt.value = student.id;
+                opt.textContent = student.name;
+                el.appendChild(opt);
+            });
         });
+
+        // 시간표 멤버 필터 갱신 (timetable.js가 있을 경우)
+        if (typeof renderTimetable === 'function') {
+            // 딜레이 없이 호출 시 timetable 데이터가 없을 수 있으므로 defer
+            setTimeout(() => renderTimetable(''), 100);
+        }
     } catch (error) {
-        console.error('Failed to load student list:', error);
-        showMessage('Unable to load student list.', 'error');
+        console.error('학생 목록 로드 실패:', error);
+        showToast('구성원 목록을 불러오지 못했습니다.', 'error');
     }
 }
 
-// Update week information
+// ── 주차 정보 갱신 ────────────────────────────────────────────
 function updateWeekInfo(dateStr) {
     if (!dateStr) return;
     const date = new Date(dateStr);
     const { year, week } = getWeekNumber(date);
     const range = getWeekRange(date);
-    document.getElementById('week-info').textContent = `${year} Week ${week}: ${range}`;
+    const el = document.getElementById('week-info');
+    if (el) el.textContent = `${year}년 ${week}주차: ${range}`;
 }
 
-// Save daily report (UI function)
+// ── 일일 보고서 저장 ──────────────────────────────────────────
 async function saveDailyReportFromForm() {
     const studentId = document.getElementById('student-select').value;
     const reportDate = document.getElementById('report-date').value;
@@ -167,73 +211,63 @@ async function saveDailyReportFromForm() {
     const notes = document.getElementById('notes').value.trim();
 
     if (!studentId || !reportDate) {
-        showMessage('Please fill in all required fields.', 'error');
+        showToast('이름과 날짜를 선택해주세요.', 'error');
         return;
     }
 
     const student = students.find(s => s.id === studentId);
     if (!student) return;
 
-    // Auto-fill work description if empty
+    // 업무 내용 자동 채우기 (비어있을 때)
     if (!todayWork && typeof getClassesForDate !== 'undefined') {
         const classes = getClassesForDate(reportDate);
         let autoWork = '';
-        
         classes.forEach(cls => {
             if (cls.isPaperDay) {
-                const presenters = cls.presenters || [];
-                if (presenters.includes(student.name)) {
+                if ((cls.presenters || []).includes(student.name)) {
                     autoWork += `• 09:00-18:00 Progress Meeting (Presenter)\n`;
                 }
             } else if (cls.students && cls.students.includes(student.name)) {
                 autoWork += `• ${cls.time} ${cls.name} (${cls.room})\n`;
             }
         });
-        
         if (autoWork) {
-            todayWork = '【Classes】\n' + autoWork + '\n【Research & Lab Work】\n(Add your research work)';
+            todayWork = '【수업】\n' + autoWork + '\n【연구 및 실험】\n(연구 내용을 입력하세요)';
         }
     }
 
     if (!todayWork || !workHours) {
-        showMessage('Please fill in all required fields.', 'error');
+        showToast('업무 내용과 소요 시간을 입력해주세요.', 'error');
         return;
     }
 
     try {
-        const reportData = {
+        const result = await saveDailyReport({
             student_id: studentId,
             student_name: student.name,
             report_date: reportDate,
             today_work: todayWork,
             work_hours: workHours,
             notes: notes
-        };
-
-        const result = await saveDailyReport(reportData);
+        });
         currentDailyReportId = result.id;
-        
-        showMessage('Report saved successfully.', 'success');
+        showToast('보고서가 저장되었습니다.');
         clearDailyForm();
         await loadDailyFeedback(result.id);
-        
-        // Refresh calendar
-        if (typeof renderCalendar === 'function') {
-            await renderCalendar();
-        }
+        if (typeof renderCalendar === 'function') await renderCalendar();
     } catch (error) {
-        console.error('Report save failed:', error);
-        showMessage('Failed to save report.', 'error');
+        console.error('보고서 저장 실패:', error);
+        showToast('저장에 실패했습니다.', 'error');
     }
 }
 
-// Load today's report
+// ── 오늘 보고서 불러오기 ─────────────────────────────────────
 async function loadTodayReport() {
     const studentId = document.getElementById('student-select').value;
     const reportDate = document.getElementById('report-date').value;
 
     if (!studentId || !reportDate) {
-        showMessage('Please select a member and date.', 'error');
+        showToast('이름과 날짜를 선택해주세요.', 'error');
         return;
     }
 
@@ -242,109 +276,86 @@ async function loadTodayReport() {
 
     try {
         const report = await getDailyReportById(studentId, reportDate);
-
         if (report) {
             currentDailyReportId = report.id;
             document.getElementById('today-work').value = report.today_work || '';
             document.getElementById('work-hours').value = report.work_hours || '';
             document.getElementById('notes').value = report.notes || '';
-            showMessage('Report loaded successfully.', 'success');
+            showToast('보고서를 불러왔습니다.');
             await loadDailyFeedback(report.id);
         } else {
-            // No existing report - auto-fill with today's classes
-            if (typeof getClassesForDate !== 'undefined') {
+            if (typeof autoFillDailyReport !== 'undefined') {
                 autoFillDailyReport(student.name, reportDate);
             } else {
-                showMessage('No report found for this date.', 'error');
+                showToast('해당 날짜의 보고서가 없습니다.', 'error');
             }
         }
     } catch (error) {
-        console.error('Failed to load report:', error);
-        showMessage('Unable to load report.', 'error');
+        console.error('보고서 불러오기 실패:', error);
+        showToast('보고서를 불러오지 못했습니다.', 'error');
     }
 }
 
-// Auto-fill daily report with class schedule
+// ── 일일 보고서 자동 채우기 (시간표 연동) ─────────────────────
 function autoFillDailyReport(studentName, dateStr) {
     if (typeof getClassesForDate === 'undefined') return;
-    
+
     const classes = getClassesForDate(dateStr);
     let workDescription = '';
     let totalMinutes = 0;
-    
-    // Get classes for this student
     const studentClasses = [];
     let isPaperDay = false;
-    
+
     classes.forEach(cls => {
         if (cls.isPaperDay) {
-            // Check if this student is presenting this week
-            const presenters = cls.presenters || [];
-            if (presenters.includes(studentName)) {
+            if ((cls.presenters || []).includes(studentName)) {
                 isPaperDay = true;
-                // Paper day: just add 1 hour placeholder
-                studentClasses.push({
-                    time: '',
-                    name: 'Progress Meeting',
-                    duration: 60 // 1 hour
-                });
+                studentClasses.push({ time: '', name: 'Progress Meeting', duration: 60 });
                 totalMinutes += 60;
             }
-            // If not a presenter, don't add anything (no paper day for this student)
         } else if (cls.students && cls.students.includes(studentName)) {
-            studentClasses.push({
-                time: cls.time,
-                name: `${cls.name} (${cls.room})`,
-                duration: cls.duration
-            });
+            studentClasses.push({ time: cls.time, name: `${cls.name} (${cls.room})`, duration: cls.duration });
             totalMinutes += cls.duration;
         }
     });
-    
+
     if (isPaperDay) {
-        // Friday - Paper day
-        workDescription = '【Progress Meeting】\n• \n\n【Daily Work】\n• \n• \n• ';
+        workDescription = '【Progress Meeting】\n• \n\n【일일 업무】\n• \n• \n• ';
     } else if (studentClasses.length > 0) {
-        // Regular class day
-        workDescription = '【Classes】\n';
+        workDescription = '【수업】\n';
         studentClasses.forEach(cls => {
-            if (cls.time) {
-                workDescription += `• ${cls.time} ${cls.name}\n`;
-            }
+            if (cls.time) workDescription += `• ${cls.time} ${cls.name}\n`;
         });
-        workDescription += '\n【Daily Work】\n';
-        workDescription += '• \n• \n• ';
+        workDescription += '\n【일일 업무】\n• \n• \n• ';
     } else {
-        // No classes
-        workDescription = '【Daily Work】\n• \n• \n• ';
+        workDescription = '【일일 업무】\n• \n• \n• ';
     }
-    
+
     document.getElementById('today-work').value = workDescription;
-    
-    // Convert minutes to hours and minutes
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    const classTime = minutes > 0 ? `${hours}h ${minutes}min` : `${hours}h`;
-    
+
+    const h = Math.floor(totalMinutes / 60);
+    const min = totalMinutes % 60;
+    const classTime = min > 0 ? `${h}h ${min}min` : `${h}h`;
+
     if (isPaperDay) {
-        document.getElementById('work-hours').value = `${classTime} (progress meeting) + ___ (daily work)`;
+        document.getElementById('work-hours').value = `${classTime} (진행 미팅) + ___ (일일 업무)`;
     } else if (totalMinutes > 0) {
-        document.getElementById('work-hours').value = `${classTime} (classes) + ___ (daily work)`;
+        document.getElementById('work-hours').value = `${classTime} (수업) + ___ (일일 업무)`;
     } else {
-        document.getElementById('work-hours').value = '___ (daily work)';
+        document.getElementById('work-hours').value = '___ (일일 업무)';
     }
-    
-    showMessage(`Auto-filled with ${studentClasses.length} class(es). Please add your daily work.`, 'success');
+
+    showToast(`수업 ${studentClasses.length}개 자동 입력됨. 업무 내용을 추가해주세요.`);
 }
 
-// Save weekly summary (UI function)
+// ── 주간 보고서 저장 ──────────────────────────────────────────
 async function saveWeeklySummaryFromForm() {
     const studentId = document.getElementById('weekly-student-select').value;
     const dateStr = document.getElementById('weekly-date').value;
     const summary = document.getElementById('weekly-summary').value.trim();
 
     if (!studentId || !dateStr || !summary) {
-        showMessage('Please fill in all required fields.', 'error');
+        showToast('이름, 날짜, 주간 업무 내용을 모두 입력해주세요.', 'error');
         return;
     }
 
@@ -356,40 +367,33 @@ async function saveWeeklySummaryFromForm() {
     const weekRange = getWeekRange(date);
 
     try {
-        const summaryData = {
+        const result = await saveWeeklySummary({
             student_id: studentId,
             student_name: student.name,
             year: year,
             week: week,
             week_range: weekRange,
             summary: summary,
-            attachments: [] // 첨부 파일 정보
-        };
-
-        const result = await saveWeeklySummary(summaryData);
+            attachments: []
+        });
         currentWeeklyReportId = result.id;
-        
-        showMessage('Weekly work saved successfully.', 'success');
+        showToast('주간 보고서가 저장되었습니다.');
         document.getElementById('weekly-summary').value = '';
         await loadWeeklyFeedback(result.id);
-        
-        // Refresh calendar
-        if (typeof renderCalendar === 'function') {
-            await renderCalendar();
-        }
+        if (typeof renderCalendar === 'function') await renderCalendar();
     } catch (error) {
-        console.error('Failed to save weekly work:', error);
-        showMessage('Failed to save weekly work.', 'error');
+        console.error('주간 보고서 저장 실패:', error);
+        showToast('저장에 실패했습니다.', 'error');
     }
 }
 
-// Load this week's summary
+// ── 이번 주 보고서 불러오기 ───────────────────────────────────
 async function loadThisWeekSummary() {
     const studentId = document.getElementById('weekly-student-select').value;
     const dateStr = document.getElementById('weekly-date').value;
 
     if (!studentId || !dateStr) {
-        showMessage('Please select a member and date.', 'error');
+        showToast('이름과 날짜를 선택해주세요.', 'error');
         return;
     }
 
@@ -398,354 +402,363 @@ async function loadThisWeekSummary() {
 
     try {
         const summary = await getWeeklySummaryById(studentId, year, week);
-
         if (summary) {
             currentWeeklyReportId = summary.id;
             document.getElementById('weekly-summary').value = summary.summary || '';
-            showMessage('Weekly work loaded successfully.', 'success');
+            showToast('주간 보고서를 불러왔습니다.');
             await loadWeeklyFeedback(summary.id);
         } else {
-            showMessage('No work report found for this week.', 'error');
+            showToast('해당 주차의 보고서가 없습니다.', 'error');
         }
     } catch (error) {
-        console.error('Failed to load weekly summary:', error);
-        showMessage('Unable to load weekly summary.', 'error');
+        console.error('주간 보고서 불러오기 실패:', error);
+        showToast('보고서를 불러오지 못했습니다.', 'error');
     }
 }
 
-// Search reports
+// ── 전체 조회 검색 ─────────────────────────────────────────────
 async function searchReports() {
     const studentId = document.getElementById('view-student-select').value;
     const viewType = document.getElementById('view-type').value;
     const startDate = document.getElementById('view-start-date').value;
     const endDate = document.getElementById('view-end-date').value;
 
-    const resultsContainer = document.getElementById('results-container');
-    resultsContainer.innerHTML = '<div class="loading">Searching...</div>';
+    const container = document.getElementById('results-container');
+    container.innerHTML = `
+        <div class="empty-state">
+            <div class="empty-icon">⏳</div>
+            <div class="empty-text">검색 중...</div>
+        </div>`;
 
     try {
         if (viewType === 'daily') {
-            await searchDailyReports(studentId, startDate, endDate, resultsContainer);
+            await searchDailyReports(studentId, startDate, endDate, container);
         } else {
-            await searchWeeklySummaries(studentId, resultsContainer);
+            await searchWeeklySummaries(studentId, container);
         }
     } catch (error) {
-        console.error('Search failed:', error);
-        resultsContainer.innerHTML = '<div class="message error">Search failed.</div>';
+        console.error('검색 실패:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">❌</div>
+                <div class="empty-text">검색에 실패했습니다.</div>
+            </div>`;
     }
 }
 
-// Search daily reports
+// ── 일일 보고서 검색 결과 렌더링 ──────────────────────────────
 async function searchDailyReports(studentId, startDate, endDate, container) {
-    try {
-        let reports = await getDailyReports(studentId, startDate, endDate);
+    let reports = await getDailyReports(studentId, startDate, endDate);
 
-        if (reports.length === 0) {
-            container.innerHTML = '<div class="no-data">조회 결과가 없습니다.</div>';
-            return;
-        }
-
-        // Fetch feedback for each report
-        try {
-            for (let report of reports) {
-                const feedbacks = await getFeedbacksByReportId(report.id, 'daily');
-                report.feedbacks = feedbacks || [];
-            }
-        } catch (fbError) {
-            console.warn('Failed to load feedback:', fbError);
-            // Show feedback failed to load but still show reports
-        }
-
-        // Display as table
-        let html = '<table class="report-table"><thead><tr>';
-        html += '<th>Date</th><th>Name</th><th>Work Description</th><th>Hours</th><th>Notes</th><th>Feedback</th>';
-        html += '</tr></thead><tbody>';
-
-        reports.forEach(report => {
-            html += '<tr>';
-            html += `<td>${report.report_date}</td>`;
-            html += `<td>${report.student_name}</td>`;
-            html += `<td><pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">${report.today_work || ''}</pre></td>`;
-            html += `<td>${report.work_hours || '-'}</td>`;
-            html += `<td><pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">${report.notes || '-'}</pre></td>`;
-            html += '<td>';
-            
-            // Show feedback count
-            const feedbackCount = (report.feedbacks && report.feedbacks.length) || 0;
-            
-            if (feedbackCount > 0) {
-                html += `<div style="margin-bottom: 8px; padding: 10px; background: #e8f5e9; border-radius: 4px; border-left: 4px solid #4caf50;">`;
-                html += `<strong style="color: #2e7d32;">💬 Feedback: ${feedbackCount}</strong>`;
-                html += `<div style="margin-top: 8px;">`;
-                
-                report.feedbacks.forEach((fb, idx) => {
-                    html += `<div style="background: white; padding: 8px; margin-top: ${idx > 0 ? '8px' : '0'}; border-radius: 4px; border: 1px solid #ddd; position: relative;">`;
-                    html += `<button onclick="deleteFeedback('${fb.id}', '${report.id}')" style="position: absolute; top: 8px; right: 8px; background: #f44336; color: white; border: none; border-radius: 3px; padding: 4px 8px; cursor: pointer; font-size: 0.85em;">Delete</button>`;
-                    html += `<div style="font-weight: 600; color: #1976d2; margin-bottom: 4px; padding-right: 50px;">${fb.feedback_by}</div>`;
-                    html += `<div style="color: #424242;">${fb.feedback_content}</div>`;
-                    html += `<div style="font-size: 0.85em; color: #9e9e9e; margin-top: 4px;">${new Date(fb.feedback_date).toLocaleString('en-US')}</div>`;
-                    html += `</div>`;
-                });
-                
-                html += `</div></div>`;
-            } else {
-                html += `<div style="color: #9e9e9e; font-size: 0.9em; margin-bottom: 8px;">💬 No Feedback</div>`;
-            }
-            
-            html += `<button class="btn btn-feedback" onclick="showFeedbackForm('${report.id}', 'daily', '${report.student_name}', '${report.report_date}')">Write Feedback</button>`;
-            html += '</td>';
-            html += '</tr>';
-        });
-
-        html += '</tbody></table>';
-        container.innerHTML = html;
-    } catch (error) {
-        console.error('Search failed:', error);
-        container.innerHTML = '<div class="message error">Search failed: ' + error.message + '</div>';
-    }
-}
-
-// Search weekly summaries
-async function searchWeeklySummaries(studentId, container) {
-    try {
-        const summaries = await getWeeklySummaries(studentId);
-
-        if (summaries.length === 0) {
-            container.innerHTML = '<div class="no-data">조회 결과가 없습니다.</div>';
-            return;
-        }
-
-        // Fetch feedback for each summary
-        try {
-            for (let summary of summaries) {
-                const feedbacks = await getFeedbacksByReportId(summary.id, 'weekly');
-                summary.feedbacks = feedbacks || [];
-            }
-        } catch (fbError) {
-            console.warn('Failed to load feedback:', fbError);
-            // Show feedback failed to load but still show summaries
-        }
-
-        // Display as table
-        let html = '<table class="report-table"><thead><tr>';
-        html += '<th>Name</th><th>Year</th><th>Week</th><th>Period</th><th>Weekly Work Summary</th><th>Feedback</th>';
-        html += '</tr></thead><tbody>';
-
-        summaries.forEach(summary => {
-            html += '<tr>';
-            html += `<td>${summary.student_name}</td>`;
-            html += `<td>${summary.year}</td>`;
-            html += `<td>${summary.week}W</td>`;
-            html += `<td>${summary.week_range}</td>`;
-            html += `<td><pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">${summary.summary || ''}</pre></td>`;
-            html += '<td>';
-            
-            // Show feedback count
-            const feedbackCount = (summary.feedbacks && summary.feedbacks.length) || 0;
-            
-            if (feedbackCount > 0) {
-                html += `<div style="margin-bottom: 8px; padding: 10px; background: #e8f5e9; border-radius: 4px; border-left: 4px solid #4caf50;">`;
-                html += `<strong style="color: #2e7d32;">💬 Feedback: ${feedbackCount}</strong>`;
-                html += `<div style="margin-top: 8px;">`;
-                
-                summary.feedbacks.forEach((fb, idx) => {
-                    html += `<div style="background: white; padding: 8px; margin-top: ${idx > 0 ? '8px' : '0'}; border-radius: 4px; border: 1px solid #ddd; position: relative;">`;
-                    html += `<button onclick="deleteFeedback('${fb.id}', '${summary.id}')" style="position: absolute; top: 8px; right: 8px; background: #f44336; color: white; border: none; border-radius: 3px; padding: 4px 8px; cursor: pointer; font-size: 0.85em;">Delete</button>`;
-                    html += `<div style="font-weight: 600; color: #1976d2; margin-bottom: 4px; padding-right: 50px;">${fb.feedback_by}</div>`;
-                    html += `<div style="color: #424242;">${fb.feedback_content}</div>`;
-                    html += `<div style="font-size: 0.85em; color: #9e9e9e; margin-top: 4px;">${new Date(fb.feedback_date).toLocaleString('en-US')}</div>`;
-                    html += `</div>`;
-                });
-                
-                html += `</div></div>`;
-            } else {
-                html += `<div style="color: #9e9e9e; font-size: 0.9em; margin-bottom: 8px;">💬 No Feedback</div>`;
-            }
-            
-            html += `<button class="btn btn-feedback" onclick="showFeedbackForm('${summary.id}', 'weekly', '${summary.student_name}', '${summary.week_range}')">Write Feedback</button>`;
-            html += '</td>';
-            html += '</tr>';
-        });
-
-        html += '</tbody></table>';
-        container.innerHTML = html;
-    } catch (error) {
-        console.error('Search failed:', error);
-        container.innerHTML = '<div class="message error">Search failed: ' + error.message + '</div>';
-    }
-}
-
-// Clear daily form
-function clearDailyForm() {
-    document.getElementById('today-work').value = '';
-    document.getElementById('work-hours').value = '';
-    document.getElementById('notes').value = '';
-}
-
-// Show message
-function showMessage(text, type) {
-    // Remove existing message
-    const existingMessage = document.querySelector('.message');
-    if (existingMessage) {
-        existingMessage.remove();
-    }
-
-    const message = document.createElement('div');
-    message.className = `message ${type}`;
-    message.textContent = text;
-
-    const activeTab = document.querySelector('.tab-content.active');
-    const firstSection = activeTab.querySelector('.form-section');
-    firstSection.insertBefore(message, firstSection.firstChild);
-
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-        message.remove();
-    }, 3000);
-}
-
-// Load daily report feedback
-async function loadDailyFeedback(reportId) {
-    if (!reportId) return;
-    
-    try {
-        const feedbacks = await getFeedbacksByReportId(reportId, 'daily');
-        
-        const container = document.getElementById('daily-feedback-container');
-        const content = document.getElementById('daily-feedback-content');
-        
-        if (feedbacks.length === 0) {
-            container.style.display = 'none';
-            return;
-        }
-        
-        let html = '';
-        feedbacks.forEach(fb => {
-            html += '<div class="feedback-item">';
-            html += `<div class="feedback-meta"><span>By: ${fb.feedback_by}</span><span>${fb.feedback_date}</span></div>`;
-            html += `<div class="feedback-text">${fb.feedback_content}</div>`;
-            html += '</div>';
-        });
-        
-        content.innerHTML = html;
-        container.style.display = 'block';
-    } catch (error) {
-        console.error('피드백 로드 실패:', error);
-    }
-}
-
-// Load weekly summary feedback
-async function loadWeeklyFeedback(reportId) {
-    if (!reportId) return;
-    
-    try {
-        const feedbacks = await getFeedbacksByReportId(reportId, 'weekly');
-        
-        const container = document.getElementById('weekly-feedback-container');
-        const content = document.getElementById('weekly-feedback-content');
-        
-        if (feedbacks.length === 0) {
-            container.style.display = 'none';
-            return;
-        }
-        
-        let html = '';
-        feedbacks.forEach(fb => {
-            html += '<div class="feedback-item">';
-            html += `<div class="feedback-meta"><span>By: ${fb.feedback_by}</span><span>${fb.feedback_date}</span></div>`;
-            html += `<div class="feedback-text">${fb.feedback_content}</div>`;
-            html += '</div>';
-        });
-        
-        content.innerHTML = html;
-        container.style.display = 'block';
-    } catch (error) {
-        console.error('피드백 로드 실패:', error);
-    }
-}
-
-// Show feedback form
-function showFeedbackForm(reportId, reportType, studentName, dateInfo) {
-    const resultsContainer = document.getElementById('results-container');
-    
-    const formHtml = `
-        <div class="feedback-form" id="feedback-form-${reportId}">
-            <h4>${studentName} - ${dateInfo} Write Feedback</h4>
-            <input type="text" id="feedback-author-${reportId}" placeholder="Author Name" value="Prof. Hyokwan Bae (배효관)" />
-            <textarea id="feedback-text-${reportId}" placeholder="Enter feedback content"></textarea>
-            <div class="feedback-actions">
-                <button class="btn btn-feedback" onclick="saveFeedbackToDb('${reportId}', '${reportType}', '${studentName}')">Save Feedback</button>
-                <button class="btn btn-cancel" onclick="closeFeedbackForm('${reportId}')">Cancel</button>
-            </div>
-        </div>
-    `;
-    
-    // Remove existing form if any
-    const existingForm = document.getElementById(`feedback-form-${reportId}`);
-    if (existingForm) {
-        existingForm.remove();
-    } else {
-        // Add new form
-        resultsContainer.insertAdjacentHTML('afterbegin', formHtml);
-    }
-}
-
-// Close feedback form
-function closeFeedbackForm(reportId) {
-    const form = document.getElementById(`feedback-form-${reportId}`);
-    if (form) {
-        form.remove();
-    }
-}
-
-// Save feedback
-async function saveFeedbackToDb(reportId, reportType, studentName) {
-    const author = document.getElementById(`feedback-author-${reportId}`).value.trim();
-    const content = document.getElementById(`feedback-text-${reportId}`).value.trim();
-    
-    if (!author || !content) {
-        alert('Please enter both author and feedback content.');
+    if (reports.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">🔍</div>
+                <div class="empty-text">조회 결과가 없습니다.</div>
+            </div>`;
         return;
     }
-    
+
+    // 피드백 병렬 로드
     try {
-        // Find student ID
+        await Promise.all(reports.map(async (report) => {
+            report.feedbacks = await getFeedbacksByReportId(report.id, 'daily').catch(() => []);
+        }));
+    } catch (e) { /* 피드백 로드 실패해도 보고서는 표시 */ }
+
+    let html = '';
+    reports.forEach(report => {
+        const feedbacks = report.feedbacks || [];
+        html += `
+        <div class="result-card card">
+            <div class="result-card-header">
+                <div class="result-meta">
+                    <span class="result-date">📅 ${report.report_date}</span>
+                    <span class="result-name">👤 ${report.student_name}</span>
+                    <span class="result-hours">⏱ ${report.work_hours || '-'}</span>
+                </div>
+            </div>
+            <div class="result-body">
+                <div class="result-section">
+                    <div class="result-label">업무 내용</div>
+                    <pre class="result-pre">${escapeHtml(report.today_work || '')}</pre>
+                </div>
+                ${report.notes ? `
+                <div class="result-section">
+                    <div class="result-label">비고</div>
+                    <pre class="result-pre">${escapeHtml(report.notes)}</pre>
+                </div>` : ''}
+            </div>
+            ${renderFeedbackBlock(feedbacks, report.id, 'daily', report.student_name, report.report_date)}
+        </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+// ── 주간 요약 검색 결과 렌더링 ────────────────────────────────
+async function searchWeeklySummaries(studentId, container) {
+    let summaries = await getWeeklySummaries(studentId);
+
+    if (summaries.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">🔍</div>
+                <div class="empty-text">조회 결과가 없습니다.</div>
+            </div>`;
+        return;
+    }
+
+    try {
+        await Promise.all(summaries.map(async (s) => {
+            s.feedbacks = await getFeedbacksByReportId(s.id, 'weekly').catch(() => []);
+        }));
+    } catch (e) { /* skip */ }
+
+    let html = '';
+    summaries.forEach(summary => {
+        const feedbacks = summary.feedbacks || [];
+        html += `
+        <div class="result-card card">
+            <div class="result-card-header">
+                <div class="result-meta">
+                    <span class="result-date">📅 ${summary.year}년 ${summary.week}주차</span>
+                    <span class="result-name">👤 ${summary.student_name}</span>
+                    <span class="result-hours">📆 ${summary.week_range}</span>
+                </div>
+            </div>
+            <div class="result-body">
+                <div class="result-section">
+                    <div class="result-label">주간 업무 요약</div>
+                    <pre class="result-pre">${escapeHtml(summary.summary || '')}</pre>
+                </div>
+            </div>
+            ${renderFeedbackBlock(feedbacks, summary.id, 'weekly', summary.student_name, `${summary.year}년 ${summary.week}주차`)}
+        </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+// ── 피드백 블록 HTML 생성 ─────────────────────────────────────
+function renderFeedbackBlock(feedbacks, reportId, reportType, studentName, dateInfo) {
+    const safeStudent = escapeHtml(studentName);
+    const safeDate = escapeHtml(dateInfo);
+    const safeId = reportId.replace(/['"]/g, '');
+
+    let fbHtml = '';
+    if (feedbacks.length > 0) {
+        fbHtml = feedbacks.map(fb => {
+            const safeFbId = (fb.id || '').replace(/['"]/g, '');
+            return `
+            <div class="feedback-item" id="fbi-${safeFbId}">
+                <div class="feedback-item-header">
+                    <span class="feedback-author">💬 ${escapeHtml(fb.feedback_by || '')}</span>
+                    <span class="feedback-date">${escapeHtml(String(fb.feedback_date || ''))}</span>
+                    <button class="btn-icon-del" onclick="deleteFeedbackItem('${safeFbId}', '${safeId}', '${reportType}')" title="삭제">✕</button>
+                </div>
+                <div class="feedback-content-text">${escapeHtml(fb.feedback_content || '')}</div>
+            </div>`;
+        }).join('');
+    } else {
+        fbHtml = `<div class="feedback-empty">아직 피드백이 없습니다.</div>`;
+    }
+
+    return `
+    <div class="feedback-area" id="fb-area-${safeId}">
+        <div class="feedback-header">
+            <span class="feedback-icon">💬</span>
+            <span class="feedback-title">교수님 피드백 (${feedbacks.length})</span>
+            <button class="btn-feedback-toggle" onclick="toggleFeedbackForm('${safeId}', '${reportType}', '${safeStudent}', '${safeDate}')">
+                + 피드백 작성
+            </button>
+        </div>
+        <div class="feedback-list" id="fb-list-${safeId}">${fbHtml}</div>
+        <div class="feedback-form" id="fb-form-${safeId}" style="display:none;">
+            <input type="text" class="form-input feedback-author-input" id="fb-author-${safeId}"
+                placeholder="작성자 이름" value="배효관 교수님">
+            <textarea class="form-textarea feedback-text-input" id="fb-text-${safeId}"
+                rows="3" placeholder="피드백 내용을 입력해주세요"></textarea>
+            <div class="feedback-form-actions">
+                <button class="btn btn-primary btn-sm" onclick="saveFeedbackItem('${safeId}', '${reportType}', '${safeStudent}')">저장</button>
+                <button class="btn btn-secondary btn-sm" onclick="toggleFeedbackForm('${safeId}', '${reportType}', '${safeStudent}', '${safeDate}')">취소</button>
+            </div>
+        </div>
+    </div>`;
+}
+
+// ── 피드백 폼 토글 ────────────────────────────────────────────
+function toggleFeedbackForm(reportId, reportType, studentName, dateInfo) {
+    const form = document.getElementById(`fb-form-${reportId}`);
+    if (!form) return;
+    const isVisible = form.style.display !== 'none';
+    form.style.display = isVisible ? 'none' : 'block';
+}
+
+// ── 피드백 저장 ───────────────────────────────────────────────
+async function saveFeedbackItem(reportId, reportType, studentName) {
+    const authorEl = document.getElementById(`fb-author-${reportId}`);
+    const textEl = document.getElementById(`fb-text-${reportId}`);
+
+    if (!authorEl || !textEl) return;
+
+    const author = authorEl.value.trim();
+    const content = textEl.value.trim();
+
+    if (!author || !content) {
+        showToast('작성자와 피드백 내용을 입력해주세요.', 'error');
+        return;
+    }
+
+    try {
         const student = students.find(s => s.name === studentName);
         const studentId = student ? student.id : '';
-        
-        const feedbackData = {
+
+        await saveFeedback({
             report_id: reportId,
             report_type: reportType,
             student_id: studentId,
             student_name: studentName,
             feedback_content: content,
             feedback_by: author,
-            feedback_date: formatDate(new Date()) + ' ' + new Date().toLocaleTimeString('en-US')
-        };
-        
-        await saveFeedback(feedbackData);
-        alert('Feedback saved successfully.');
-        closeFeedbackForm(reportId);
+            feedback_date: formatDate(new Date()) + ' ' + new Date().toLocaleTimeString('ko-KR')
+        });
+
+        showToast('피드백이 저장되었습니다.');
+        textEl.value = '';
+
+        // 폼 숨기고 목록 갱신
+        document.getElementById(`fb-form-${reportId}`).style.display = 'none';
+        await refreshFeedbackList(reportId, reportType);
     } catch (error) {
-        console.error('Failed to save feedback:', error);
-        alert('Failed to save feedback.');
+        console.error('피드백 저장 실패:', error);
+        showToast('피드백 저장에 실패했습니다.', 'error');
     }
 }
 
-// Delete feedback
-async function deleteFeedback(feedbackId, reportId) {
-    if (!confirm('Are you sure you want to delete this feedback?')) {
-        return;
-    }
-    
+// ── 피드백 삭제 ───────────────────────────────────────────────
+async function deleteFeedbackItem(feedbackId, reportId, reportType) {
+    if (!confirm('이 피드백을 삭제하시겠습니까?')) return;
+
     try {
         await db.collection('feedbacks').doc(feedbackId).delete();
-        alert('Feedback deleted successfully.');
-        
-        // Click search button again (refresh)
-        document.getElementById('search-btn').click();
+        showToast('피드백이 삭제되었습니다.');
+        await refreshFeedbackList(reportId, reportType);
     } catch (error) {
-        console.error('Failed to delete feedback:', error);
-        alert('Failed to delete feedback.');
+        console.error('피드백 삭제 실패:', error);
+        showToast('삭제에 실패했습니다.', 'error');
     }
+}
+
+// ── 피드백 목록 갱신 ──────────────────────────────────────────
+async function refreshFeedbackList(reportId, reportType) {
+    const listEl = document.getElementById(`fb-list-${reportId}`);
+    const titleEl = document.querySelector(`#fb-area-${reportId} .feedback-title`);
+    if (!listEl) return;
+
+    const feedbacks = await getFeedbacksByReportId(reportId, reportType).catch(() => []);
+
+    if (titleEl) titleEl.textContent = `교수님 피드백 (${feedbacks.length})`;
+
+    if (feedbacks.length === 0) {
+        listEl.innerHTML = `<div class="feedback-empty">아직 피드백이 없습니다.</div>`;
+        return;
+    }
+
+    listEl.innerHTML = feedbacks.map(fb => {
+        const safeFbId = (fb.id || '').replace(/['"]/g, '');
+        return `
+        <div class="feedback-item" id="fbi-${safeFbId}">
+            <div class="feedback-item-header">
+                <span class="feedback-author">💬 ${escapeHtml(fb.feedback_by || '')}</span>
+                <span class="feedback-date">${escapeHtml(String(fb.feedback_date || ''))}</span>
+                <button class="btn-icon-del" onclick="deleteFeedbackItem('${safeFbId}', '${reportId}', '${reportType}')" title="삭제">✕</button>
+            </div>
+            <div class="feedback-content-text">${escapeHtml(fb.feedback_content || '')}</div>
+        </div>`;
+    }).join('');
+}
+
+// ── 보고서 제출 탭 피드백 로드 ────────────────────────────────
+async function loadDailyFeedback(reportId) {
+    if (!reportId) return;
+    const area = document.getElementById('daily-feedback-area');
+    const list = document.getElementById('daily-feedback-list');
+    if (!area || !list) return;
+
+    try {
+        const feedbacks = await getFeedbacksByReportId(reportId, 'daily');
+        if (feedbacks.length === 0) {
+            area.style.display = 'none';
+            return;
+        }
+        area.style.display = 'block';
+        list.innerHTML = feedbacks.map(fb => `
+            <div class="feedback-item">
+                <div class="feedback-item-header">
+                    <span class="feedback-author">💬 ${escapeHtml(fb.feedback_by || '')}</span>
+                    <span class="feedback-date">${escapeHtml(String(fb.feedback_date || ''))}</span>
+                </div>
+                <div class="feedback-content-text">${escapeHtml(fb.feedback_content || '')}</div>
+            </div>`).join('');
+    } catch (error) {
+        console.error('일일 피드백 로드 실패:', error);
+    }
+}
+
+async function loadWeeklyFeedback(reportId) {
+    if (!reportId) return;
+    const area = document.getElementById('weekly-feedback-area');
+    const list = document.getElementById('weekly-feedback-list');
+    if (!area || !list) return;
+
+    try {
+        const feedbacks = await getFeedbacksByReportId(reportId, 'weekly');
+        if (feedbacks.length === 0) {
+            area.style.display = 'none';
+            return;
+        }
+        area.style.display = 'block';
+        list.innerHTML = feedbacks.map(fb => `
+            <div class="feedback-item">
+                <div class="feedback-item-header">
+                    <span class="feedback-author">💬 ${escapeHtml(fb.feedback_by || '')}</span>
+                    <span class="feedback-date">${escapeHtml(String(fb.feedback_date || ''))}</span>
+                </div>
+                <div class="feedback-content-text">${escapeHtml(fb.feedback_content || '')}</div>
+            </div>`).join('');
+    } catch (error) {
+        console.error('주간 피드백 로드 실패:', error);
+    }
+}
+
+// ── 폼 초기화 ─────────────────────────────────────────────────
+function clearDailyForm() {
+    ['today-work', 'work-hours', 'notes'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const area = document.getElementById('daily-feedback-area');
+    if (area) area.style.display = 'none';
+}
+
+// ── 유틸 ──────────────────────────────────────────────────────
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// 하위 호환 별칭
+function showFeedbackForm(reportId, reportType, studentName, dateInfo) {
+    toggleFeedbackForm(reportId, reportType, studentName, dateInfo);
+}
+function deleteFeedback(feedbackId, reportId) {
+    deleteFeedbackItem(feedbackId, reportId, 'daily');
+}
+function saveFeedbackToDb(reportId, reportType, studentName) {
+    saveFeedbackItem(reportId, reportType, studentName);
 }
