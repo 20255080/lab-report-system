@@ -1,14 +1,5 @@
 {
   "projects": {
     "default": "bless-lab"
-  },
-  "targets": {
-    "bless-lab": {
-      "hosting": {
-        "bless-lab": [
-          "bless-lab"
-        ]
-      }
-    }
   }
 }
