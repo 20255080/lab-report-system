@@ -1,0 +1,31 @@
+/* =============================================================
+   BLESS Lab 캘린더 동그라미 마커 추가 CSS
+   기존 style.css 끝부분에 이 내용을 추가하세요.
+   ============================================================= */
+
+/* 전원 제출 완료된 날짜 셀 강조 */
+.work-calendar-cell.all-done-cell {
+    background: linear-gradient(135deg, #f0fff4 0%, #ffffff 100%);
+}
+
+/* 동그라미 컨테이너 클릭 이벤트 방지 */
+.work-calendar-cell .dot-container {
+    pointer-events: none;
+}
+
+/* 캘린더 셀 높이 조정 (동그라미 2줄까지 표시) */
+.work-calendar-cell {
+    min-height: 64px !important;
+    position: relative;
+}
+
+/* 범례 텍스트 */
+.calendar-legend span {
+    white-space: nowrap;
+}
+
+/* 제출 현황 패널 */
+#submission-status-area {
+    border-radius: 0;
+    font-size: 12px;
+}
