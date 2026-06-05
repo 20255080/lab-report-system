@@ -59,31 +59,43 @@ function showMessage(text, type) {
     showToast(text, type === 'error' ? 'error' : 'success');
 }
 
+// 탭별 헤더 서브타이틀
+const TAB_SUBTITLES = {
+    submit:    '보고서 제출',
+    viewall:   '전체 조회',
+    timetable: '시간표',
+    calendar:  '캘린더'
+};
+
 // ── 탭 전환 ──────────────────────────────────────────────────────
 function switchTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
+    // 하단 nav 버튼 활성화
+    document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });
+    // 탭 패널 전환
     document.querySelectorAll('.tab-pane').forEach(pane => {
         pane.classList.toggle('active', pane.id === `tab-${tab}`);
     });
-
+    // 헤더 서브타이틀
+    const subtitleEl = document.getElementById('header-subtitle');
+    if (subtitleEl) subtitleEl.textContent = TAB_SUBTITLES[tab] || '';
+    // 보고서 제출 탭에서만 일일/주간 토글 표시
+    const toggle = document.getElementById('header-subtab-toggle');
+    if (toggle) toggle.style.display = tab === 'submit' ? 'flex' : 'none';
     // 캘린더 탭 진입 시 렌더링
-    if (tab === 'calendar' && typeof renderCalendar === 'function') {
-        renderCalendar();
-    }
+    if (tab === 'calendar' && typeof renderCalendar === 'function') renderCalendar();
     // 시간표 탭 진입 시 렌더링
-    if (tab === 'timetable' && typeof renderTimetable === 'function') {
-        renderTimetable('');
-    }
+    if (tab === 'timetable' && typeof renderTimetable === 'function') setTimeout(() => renderTimetable(''), 80);
 }
 
-// ── 서브탭 전환 (일일 / 주간) ─────────────────────────────────────
+// ── 서브탭 전환 (일일 / 주간) — 헤더 토글 연동 ─────────────────────
 function switchSubTab(subTab) {
     currentSubTab = subTab;
-
-    document.getElementById('subtab-daily-btn').classList.toggle('active', subTab === 'daily');
-    document.getElementById('subtab-weekly-btn').classList.toggle('active', subTab === 'weekly');
+    const hd = document.getElementById('hst-daily');
+    const hw = document.getElementById('hst-weekly');
+    if (hd) hd.classList.toggle('active', subTab === 'daily');
+    if (hw) hw.classList.toggle('active', subTab === 'weekly');
     document.getElementById('subtab-daily').classList.toggle('active', subTab === 'daily');
     document.getElementById('subtab-weekly').classList.toggle('active', subTab === 'weekly');
 }

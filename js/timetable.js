@@ -163,77 +163,109 @@ function buildDotHTML(colors, allDone) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// TIMETABLE FUNCTIONS
+// TIMETABLE FUNCTIONS  (Flutter 앱 리스트형 스타일)
 // ══════════════════════════════════════════════════════════════
+
+// 요일 표시 한글 매핑
+const DAY_KO_MAP = { Mon:'월', Tue:'화', Wed:'수', Thu:'목', Fri:'금' };
+// 요일 순서 (정렬용)
+const DAY_ORDER  = { Mon:1, Tue:2, Wed:3, Thu:4, Fri:5 };
+
 function renderTimetable(selectedMember = '') {
     const container = document.getElementById('timetable-display');
     if (!container) return;
-    
-    let html = '';
-    
+
+    // ── 시간대별 수업 목록 수집 ──────────────────────────────────
+    // { "09:00-10:15": [ { day, course, members:[...], prof, room }, ... ] }
+    const timeGroups = {};
+
     if (selectedMember) {
+        // 특정 멤버 시간표
         const schedule = timetableData.memberSchedules[selectedMember] || [];
-        html += `<h3 style="margin-bottom: 15px;">${selectedMember}'s Schedule</h3>`;
-        
-        html += '<table class="member-schedule-table">';
-        html += '<thead><tr><th>Day</th><th>Time</th><th>Course</th><th>Professor</th><th>Room</th></tr></thead>';
-        html += '<tbody>';
         schedule.forEach(cls => {
-            html += `<tr><td>${cls.day}</td><td>${cls.time}</td><td>${cls.course}</td><td>${cls.prof}</td><td>${cls.room}</td></tr>`;
+            if (!timeGroups[cls.time]) timeGroups[cls.time] = [];
+            timeGroups[cls.time].push({
+                day: cls.day,
+                course: cls.course,
+                members: [selectedMember],
+                prof: cls.prof,
+                room: cls.room
+            });
         });
-        html += '</tbody></table>';
-        
-        html += '<div class="schedule-card-list">';
-        schedule.forEach(cls => {
-            html += `<div class="schedule-card">
-                <span class="schedule-card-day">${cls.day}</span>
-                <div class="schedule-card-time">${cls.time}</div>
-                <div class="schedule-card-course">${cls.course}</div>
-                <div class="schedule-card-details">👤 ${cls.prof}<br>📍 ${cls.room}</div>
+    } else {
+        // 전체 시간표: memberSchedules 전체 순회
+        Object.entries(timetableData.memberSchedules).forEach(([memberName, sched]) => {
+            sched.forEach(cls => {
+                if (!timeGroups[cls.time]) timeGroups[cls.time] = [];
+                // 같은 시간대+요일+수업 항목 합치기
+                const existing = timeGroups[cls.time].find(
+                    e => e.day === cls.day && e.course === cls.course
+                );
+                if (existing) {
+                    if (!existing.members.includes(memberName)) existing.members.push(memberName);
+                } else {
+                    timeGroups[cls.time].push({
+                        day: cls.day,
+                        course: cls.course,
+                        members: [memberName],
+                        prof: cls.prof,
+                        room: cls.room
+                    });
+                }
+            });
+        });
+    }
+
+    // 시간대 정렬 (오름차순)
+    const sortedTimes = Object.keys(timeGroups).sort();
+
+    // 단축 이름 변환
+    function shortName(full) {
+        const SHORT = {
+            'Kim Dong-jin (김동진)': '김동진',
+            'Kim Dong-woo (김동우)': '김동우',
+            'Saqib':                 'Saqib',
+            'Kim Su-jin (김수진)':   '김수진',
+            'Jo Yu-kyung (조유경)':  '조유경',
+            'Minkee Cho (조민기)':   '조민기',
+            'Lee Hye-bin (이혜빈)':  '이혜빈',
+            'Yoo Sung-il (유성일)':  '유성일',
+            'Song Da-ye (송다예)':   '송다예',
+        };
+        return SHORT[full] || full;
+    }
+
+    // ── HTML 생성 ─────────────────────────────────────────────
+    let html = '';
+
+    if (sortedTimes.length === 0) {
+        html = '<div style="padding:32px 16px;text-align:center;color:#95a5a6;font-size:.9rem;">등록된 수업이 없습니다.</div>';
+        container.innerHTML = html;
+        return;
+    }
+
+    sortedTimes.forEach(time => {
+        // 시간 그룹 헤더 (Flutter: 다크 네이비 배경)
+        html += `<div class="tt-time-header">${time}</div>`;
+
+        // 해당 시간대 수업들 — 요일 순서로 정렬
+        const items = timeGroups[time].sort(
+            (a, b) => (DAY_ORDER[a.day] || 9) - (DAY_ORDER[b.day] || 9)
+        );
+
+        items.forEach(item => {
+            const dayKo = DAY_KO_MAP[item.day] || item.day;
+            const memberText = item.members.map(shortName).join(', ');
+
+            html += `<div class="tt-class-item">
+                <span class="tt-day-badge tt-day-${item.day}">${dayKo}</span>
+                <div class="tt-class-info">
+                    <div class="tt-class-members">${memberText} - ${item.course}</div>
+                </div>
             </div>`;
         });
-        html += '</div>';
-    } else {
-        html += '<div class="timetable-image-style">';
-        html += '<div class="timetable-scroll-hint">좌우로 스크롤하여 전체 시간표를 확인하세요</div>';
-        html += '<div class="timetable-title"><h3>BLESS Timetable</h3><p>1<sup>st</sup> Semester, 2026</p></div>';
-        html += '<table class="timetable-classic">';
-        html += '<thead><tr><th class="period-header">2026-1st semester</th><th>Mon</th><th>Tue</th><th>Wed</th><th colspan="2">Thu</th></tr></thead>';
-        html += '<tbody>';
-        
-        html += '<tr><td class="period-cell">1교시<br>(09:00-10:15)</td>';
-        html += '<td class="timetable-day-cell"></td>';
-        html += '<td class="timetable-day-cell"><span class="student yellow">동진</span><br>Climate-<br>Environment<br>Modeling<br><small>110-1107<br>Prof. Myong-In Lee</small></td>';
-        html += '<td class="timetable-day-cell"></td>';
-        html += '<td class="timetable-day-cell"><span class="student yellow">동진</span><br>Climate-<br>Environment<br>Modeling<br><small>110-1107<br>Prof. Myong-In Lee</small></td>';
-        html += '<td rowspan="2" class="merged-cell timetable-day-cell"><span class="student purple">유경</span><br>Theory of<br>Planning<br><small>110-1014<br>Prof. Gihyoug Cho</small></td></tr>';
-        
-        html += '<tr><td class="period-cell">2교시<br>(10:30-11:45)</td>';
-        html += '<td class="timetable-day-cell"><span class="student blue">Saqib</span><br>Water Chemistry<br><small>110-1105<br>Prof. Young-Nam<br>Kwon</small></td>';
-        html += '<td class="timetable-day-cell"></td>';
-        html += '<td class="timetable-day-cell"><span class="student blue">Saqib</span><br>Water Chemistry<br><small>110-1105<br>Prof. Young-Nam<br>Kwon</small></td>';
-        html += '<td class="timetable-day-cell"></td></tr>';
-        
-        html += '<tr><td class="period-cell">3교시<br>(13:00-14:15)</td>';
-        html += '<td class="timetable-day-cell"></td>';
-        html += '<td class="timetable-day-cell"><span class="student yellow">동진</span> <span class="student green">동우</span><br><span class="student blue">Saqib</span><br>Wastewater<br>Microbiology<br><small>110-1105<br>Prof. Changsoo Lee</small></td>';
-        html += '<td class="timetable-day-cell"></td>';
-        html += '<td colspan="2" class="timetable-day-cell"><span class="student yellow">동진</span> <span class="student green">동우</span><br><span class="student blue">Saqib</span><br>Wastewater<br>Microbiology<br><small>110-1105<br>Prof. Changsoo Lee</small></td></tr>';
-        
-        html += '<tr><td class="period-cell">4교시<br>(14:30-15:45)</td>';
-        html += '<td class="timetable-day-cell"></td>';
-        html += '<td rowspan="2" class="merged-cell merged-vertical timetable-day-cell"><span class="student pink">수진</span> <span class="student purple">유경</span><br>Disaster Theory<br>and Practice<br><small>110-1009<br>Prof. Jibum Chung</small></td>';
-        html += '<td class="timetable-day-cell"></td>';
-        html += '<td colspan="2" class="timetable-day-cell"></td></tr>';
-        
-        html += '<tr><td class="period-cell">5교시<br>(16:00-17:15)</td>';
-        html += '<td class="timetable-day-cell"><span class="student yellow">동진</span> <span class="student blue">Saqib</span><br>Introduction to<br>Environmental<br>Analysis<br><small>110-1009<br>Prof. Sung-Deuk Choi</small></td>';
-        html += '<td class="timetable-day-cell"><span class="student yellow">동진</span> <span class="student blue">Saqib</span><br>Introduction to<br>Environmental<br>Analysis<br><small>110-1009<br>Prof. Sung-Deuk Choi</small></td>';
-        html += '<td colspan="2" class="timetable-day-cell"><span class="student yellow">동진</span> <span class="student blue">Saqib</span><br>Seminar<br><small>110-1007<br>Prof. Myong-In Lee</small></td></tr>';
-        
-        html += '</tbody></table></div>';
-    }
-    
+    });
+
     container.innerHTML = html;
 }
 
@@ -353,264 +385,214 @@ function showDateDetail(dateStr) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// renderCalendar() — 동그라미 마커 방식 (핵심 업데이트)
+// renderCalendar() — Flutter 앱 동일 스타일 (미제출 제거)
 // ══════════════════════════════════════════════════════════════
 async function renderCalendar() {
     loadStoredEvents();
-    
+
     const container = document.getElementById('monthly-calendar');
     if (!container) return;
 
     // 이번 달 제출 현황 로드
-    const submissions  = await loadMonthSubmissions(currentYear, currentMonth);
+    const submissions   = await loadMonthSubmissions(currentYear, currentMonth);
     const totalStudents = cachedStudentOrder.length || 9;
 
     const monthNames = ['January','February','March','April','May','June',
                         'July','August','September','October','November','December'];
-    
+
+    const todayObj = new Date();
+    const todayStr = `${todayObj.getFullYear()}-${String(todayObj.getMonth()+1).padStart(2,'0')}-${String(todayObj.getDate()).padStart(2,'0')}`;
+
+    // ── 캘린더 네비게이션 헤더 ───────────────────────────────────
     let html = `
-    <div class="calendar-nav">
-        <button class="nav-btn-calendar" onclick="previousMonth()">◀ Previous Month</button>
-        <h3 class="calendar-month-title">${monthNames[currentMonth]} ${currentYear}</h3>
-        <button class="nav-btn-calendar" onclick="nextMonth()">Next Month ▶</button>
-    </div>
-    <div class="work-calendar-grid">`;
-    
+    <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="previousMonth()">&#10094;</button>
+        <span class="cal-month-title">${monthNames[currentMonth]} ${currentYear}</span>
+        <button class="cal-nav-btn" onclick="nextMonth()">&#10095;</button>
+    </div>`;
+
+    // ── 요일 헤더 ─────────────────────────────────────────────
+    html += '<div class="cal-grid">';
     ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
-        html += `<div class="work-weekday">${d}</div>`;
+        html += `<div class="cal-dow">${d}</div>`;
     });
-    
+
+    // ── 날짜 셀 ───────────────────────────────────────────────
     const firstDay    = new Date(currentYear, currentMonth, 1);
     const lastDay     = new Date(currentYear, currentMonth + 1, 0);
-    const startDay    = firstDay.getDay();
+    const startDay    = firstDay.getDay();     // 0=Sun
     const daysInMonth = lastDay.getDate();
-    const semStart    = new Date(timetableData.semesterStart);
-    const semEnd      = new Date(timetableData.semesterEnd);
-    const todayObj    = new Date();
-    const todayStr    = `${todayObj.getFullYear()}-${String(todayObj.getMonth()+1).padStart(2,'0')}-${String(todayObj.getDate()).padStart(2,'0')}`;
-    
-    for (let i = 0; i < startDay; i++) {
-        html += '<div class="work-calendar-cell empty"></div>';
+
+    // 이전 달 빈칸 (other-month)
+    const prevLastDay = new Date(currentYear, currentMonth, 0).getDate();
+    for (let i = startDay - 1; i >= 0; i--) {
+        html += `<div class="cal-day other-month">
+            <div class="cal-day-num">${prevLastDay - i}</div>
+        </div>`;
     }
-    
+
+    // 이번 달 날짜
     for (let day = 1; day <= daysInMonth; day++) {
-        const date    = new Date(currentYear, currentMonth, day);
         const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        const inSemester = date >= semStart && date <= semEnd;
-        const isToday    = dateStr === todayStr;
-        
-        // ── 제출 동그라미 ──────────────────────────────────────
+        const dow     = new Date(currentYear, currentMonth, day).getDay();
+        const isToday = dateStr === todayStr;
+
+        let dayClass = 'cal-day';
+        if (isToday) dayClass += ' today';
+        if (dow === 0) dayClass += ' sun';
+        if (dow === 6) dayClass += ' sat';
+
+        // 제출 동그라미 (멤버별 색상)
         const submittedIds = submissions[dateStr] || [];
-        const colors = submittedIds.map(id => {
-            const idx = cachedStudentOrder.indexOf(id);
-            return idx >= 0 ? MEMBER_COLORS[idx % MEMBER_COLORS.length] : '#999';
-        });
-        const allDone = colors.length >= totalStudents && totalStudents > 0;
-        const dotHTML = buildDotHTML(colors, allDone);
-        
-        // 로컬 이벤트
-        const events     = calendarEvents[dateStr] || [];
-        const eventCount = events.length;
-        
-        let cellClass = `work-calendar-cell clickable-cell${isToday ? ' today-cell' : ''}${!inSemester ? ' out-semester' : ''}${allDone ? ' all-done-cell' : ''}`;
-        
-        html += `<div class="${cellClass}" onclick="showDatePanel('${dateStr}')">`;
-        html += `<div class="work-day-number">${day}</div>`;
-        
-        // 동그라미 표시
-        if (dotHTML) html += dotHTML;
-        
-        // 로컬 이벤트 미리보기
-        if (eventCount > 0) {
-            html += '<div class="event-preview">';
-            const title = events[0].title.length > 10 ? events[0].title.substring(0,10)+'…' : events[0].title;
-            html += `<div class="preview-item">${events[0].time ? `<span class="preview-time">${events[0].time.substring(0,5)}</span> ` : ''}<span class="preview-title">${title}</span></div>`;
-            if (eventCount > 1) html += `<div class="preview-more">+${eventCount-1}</div>`;
-            html += '</div>';
+        let dotsHtml = '';
+        if (submittedIds.length > 0) {
+            dotsHtml = '<div class="cal-dots">';
+            submittedIds.forEach(id => {
+                const idx   = cachedStudentOrder.indexOf(id);
+                const color = idx >= 0 ? MEMBER_COLORS[idx % MEMBER_COLORS.length] : '#999';
+                dotsHtml += `<span class="cal-dot" style="background:${color};"></span>`;
+            });
+            dotsHtml += '</div>';
         }
-        
-        html += '</div>';
+
+        html += `<div class="${dayClass}" onclick="showDatePanel('${dateStr}')">
+            <div class="cal-day-num">${day}</div>
+            ${dotsHtml}
+        </div>`;
     }
-    
-    html += '</div>';
-    
-    // ── 범례: 멤버별 색상 ─────────────────────────────────────
-    html += '<div style="padding:8px 12px 6px;display:flex;flex-wrap:wrap;gap:5px 10px;background:#fff;border-top:1px solid #eee;">';
+
+    // 다음 달 빈칸 (other-month) — 마지막 행 채우기
+    const endDay   = lastDay.getDay();
+    const fillEnd  = endDay < 6 ? 6 - endDay : 0;
+    for (let i = 1; i <= fillEnd; i++) {
+        html += `<div class="cal-day other-month">
+            <div class="cal-day-num">${i}</div>
+        </div>`;
+    }
+
+    html += '</div>'; // .cal-grid
+
+    // ── 범례 ─────────────────────────────────────────────────
+    html += '<div class="cal-legend">';
     MEMBER_COLORS.forEach((color, i) => {
-        html += `<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#555;">
-            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};"></span>
-            ${STUDENT_SHORT_NAMES[i] || 'STU00'+(i+1)}
-        </span>`;
+        html += `<div class="cal-legend-item">
+            <span class="cal-legend-dot" style="background:${color};"></span>
+            <span>${STUDENT_SHORT_NAMES[i] || 'STU00'+(i+1)}</span>
+        </div>`;
     });
     html += '</div>';
-    
-    // ── 제출 현황 패널 + 이벤트 폼 ───────────────────────────
+
+    // ── 제출 현황 패널 (선택된 날짜, 미제출 표시 없음) ────────
     html += `
-    <div class="event-form-section">
-        <div class="event-form-header">
-            <h3 id="selected-date-display">날짜를 선택하세요</h3>
-        </div>
-        
-        <div id="submission-status-area" style="display:none;padding:10px 14px;background:#fafafa;border-bottom:1px solid #eee;"></div>
-        
-        <div id="event-list-area" class="event-list-area" style="display: none;">
-            <h4>Existing Events</h4>
-            <div id="events-display"></div>
-        </div>
-        
-        <div class="event-input-form">
-            <button class="btn-add-event" onclick="toggleEventForm()">+ Add Event</button>
-            
-            <div id="event-form-fields" class="event-form-fields" style="display: none;">
-                <div class="form-row">
-                    <label>Event Title *</label>
-                    <input type="text" id="event-title" placeholder="e.g., Team Meeting, Seminar, etc." />
-                </div>
-                <div class="form-row">
-                    <label>Time</label>
-                    <input type="time" id="event-time" />
-                </div>
-                <div class="form-row">
-                    <label>Author / Organizer *</label>
-                    <input type="text" id="event-author" placeholder="e.g., Kim Su-jin, Prof. Bae, etc." />
-                </div>
-                <div class="form-row">
-                    <label>Location</label>
-                    <input type="text" id="event-location" placeholder="e.g., Meeting Room A, Online, etc." />
-                </div>
-                <div class="form-row">
-                    <label>Participants</label>
-                    <input type="text" id="event-participants" placeholder="e.g., Prof. Bae, Research Team, etc." />
-                </div>
-                <div class="form-row">
-                    <label>Description</label>
-                    <textarea id="event-description" placeholder="Enter event details..." rows="4"></textarea>
-                </div>
-                <div class="form-buttons">
-                    <button class="btn-save-event" onclick="saveEvent()">Save</button>
-                    <button class="btn-cancel-event" onclick="cancelEventForm()">Cancel</button>
-                </div>
-            </div>
-        </div>
+    <div class="cal-status-panel" id="cal-status-panel" style="display:none;">
+        <div class="cal-status-title" id="cal-status-title"></div>
+        <div class="cal-chips" id="cal-chips"></div>
     </div>`;
-    
+
+    // ── 날짜 상세 패널 ────────────────────────────────────────
+    html += `
+    <div class="cal-detail-panel" id="cal-detail-panel" style="display:none;">
+        <div class="cal-detail-date" id="cal-detail-date"></div>
+        <div id="cal-detail-content"></div>
+    </div>`;
+
     container.innerHTML = html;
 }
 
-// ── 날짜 패널 표시 (제출 현황 포함) ──────────────────────────
+// ── 날짜 패널 표시 (Flutter 앱 스타일 — 미제출 표시 없음) ───────
 async function showDatePanel(dateStr) {
     selectedDate = dateStr;
-    
-    const [y, m, d]   = dateStr.split('-').map(Number);
+
+    const [y, m, d] = dateStr.split('-').map(Number);
     const formattedDate = new Date(y, m-1, d).toLocaleDateString('ko-KR', {
         year:'numeric', month:'long', day:'numeric'
     });
-    
-    const dateDisplay = document.getElementById('selected-date-display');
-    if (dateDisplay) dateDisplay.textContent = formattedDate;
-    
-    // ── 제출 현황 패널 ──────────────────────────────────────
-    const statusArea = document.getElementById('submission-status-area');
-    if (statusArea) {
+
+    // ── 제출 현황 패널: 제출자만 칩으로 표시 (미제출 목록 없음) ──
+    const statusPanel = document.getElementById('cal-status-panel');
+    const statusTitle = document.getElementById('cal-status-title');
+    const chipsEl     = document.getElementById('cal-chips');
+
+    if (statusPanel && statusTitle && chipsEl) {
         const key          = `${y}-${String(m).padStart(2,'0')}`;
         const submissions  = submissionCache[key] || {};
         const submittedIds = submissions[dateStr] || [];
         const total        = cachedStudentOrder.length || 9;
         const doneCount    = submittedIds.length;
         const allDone      = doneCount >= total && total > 0;
-        
-        const notYetNames = cachedStudentOrder
-            .filter(id => !submittedIds.includes(id))
-            .map(id => {
-                const idx = cachedStudentOrder.indexOf(id);
-                return STUDENT_SHORT_NAMES[idx] || id;
-            });
-        
-        let statusHTML = `<div style="margin-bottom:8px;">
-            <span style="font-weight:bold;font-size:13px;color:${allDone ? '#27ae60' : '#e67e22'};">
-                ${allDone ? '✅ 전원 제출 완료' : '⏳ 제출 현황'} (${doneCount}/${total})
-            </span>
-        </div>`;
-        
-        statusHTML += '<div style="display:flex;flex-wrap:wrap;gap:5px;">';
+
+        const statusIcon = allDone ? '✅' : '🟡';
+        statusTitle.innerHTML = `<span style="color:${allDone?'#27ae60':'#e67e22'}">${statusIcon} 제출 현황 (${doneCount}/${total})</span>`;
+
+        // 제출자 칩 (미제출자는 흐린 칩으로만 표시, 미제출 텍스트 없음)
+        let chipsHtml = '';
         cachedStudentOrder.forEach((id, idx) => {
             const color = MEMBER_COLORS[idx % MEMBER_COLORS.length];
             const name  = STUDENT_SHORT_NAMES[idx] || id;
             const done  = submittedIds.includes(id);
-            statusHTML += `<span style="
-                display:inline-flex;align-items:center;gap:4px;
-                padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600;
-                background:${done ? color+'20' : '#f0f0f0'};
-                border:1px solid ${done ? color+'60' : '#ddd'};
-                color:${done ? color : '#aaa'};">
-                <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${done ? color : '#ccc'};"></span>
-                ${name} ${done ? '✓' : '–'}
+            chipsHtml += `<span class="cal-chip${done ? ' submitted' : ''}" style="${done ? '--chip-color:'+color : ''}">
+                ${name}${done ? ' ✓' : ''}
             </span>`;
         });
-        statusHTML += '</div>';
-        
-        if (notYetNames.length > 0) {
-            statusHTML += `<div style="margin-top:6px;font-size:11px;color:#e74c3c;font-weight:500;">
-                미제출: ${notYetNames.join(', ')}
-            </div>`;
-        }
-        
-        statusArea.innerHTML = statusHTML;
-        statusArea.style.display = 'block';
+        chipsEl.innerHTML = chipsHtml;
+        statusPanel.style.display = 'block';
     }
-    
-    // ── 로컬 이벤트 ──────────────────────────────────────────
-    const events       = calendarEvents[dateStr] || [];
-    const eventListArea = document.getElementById('event-list-area');
-    const eventsDisplay = document.getElementById('events-display');
-    
-    if (eventListArea && eventsDisplay) {
-        if (events.length === 0) {
-            eventListArea.style.display = 'none';
-        } else {
-            eventListArea.style.display = 'block';
-            let eventsHtml = '';
-            events.forEach((event, idx) => {
-                eventsHtml += `
-                <div class="event-card">
-                    <div class="event-card-header">
-                        <strong>${event.time || 'All day'}</strong>
-                        <button class="btn-delete-small" onclick="deleteEvent(${idx})">Delete</button>
-                    </div>
-                    <div class="event-card-title">${event.title}</div>
-                    ${event.author      ? `<div class="event-card-info">✍️ ${event.author}</div>` : ''}
-                    ${event.location    ? `<div class="event-card-info">📍 ${event.location}</div>` : ''}
-                    ${event.participants? `<div class="event-card-info">👥 ${event.participants}</div>` : ''}
-                    ${event.description ? `<div class="event-card-desc">${event.description}</div>` : ''}
+
+    // ── 날짜 상세 패널: Firestore에서 보고서 불러오기 ──────────
+    const detailPanel   = document.getElementById('cal-detail-panel');
+    const detailDateEl  = document.getElementById('cal-detail-date');
+    const detailContent = document.getElementById('cal-detail-content');
+
+    if (detailPanel && detailDateEl && detailContent) {
+        detailDateEl.textContent = formattedDate;
+
+        detailContent.innerHTML = '<div style="padding:16px 0;text-align:center;color:#95a5a6;font-size:.85rem;">불러오는 중...</div>';
+        detailPanel.style.display = 'block';
+
+        try {
+            const snapshot = await db.collection('daily_reports')
+                .where('report_date', '==', dateStr)
+                .get();
+
+            if (snapshot.empty) {
+                detailContent.innerHTML = `
+                <div class="cal-no-report">
+                    <div class="cal-no-report-icon">📋</div>
+                    <div style="font-size:.82rem;margin-top:4px;color:#aaa;">${formattedDate}</div>
+                    <div class="cal-no-report-text">제출된 보고서 없음</div>
                 </div>`;
-            });
-            eventsDisplay.innerHTML = eventsHtml;
+            } else {
+                let reportsHtml = '';
+                snapshot.forEach(doc => {
+                    const data     = doc.data();
+                    const name     = data.student_name || data.student_id || '알 수 없음';
+                    const preview  = (data.today_work || '').substring(0, 80) + (data.today_work && data.today_work.length > 80 ? '…' : '');
+                    const hours    = data.work_hours ? `⏱ ${data.work_hours}` : '';
+
+                    // 멤버 색상 찾기
+                    const sIdx  = STUDENT_SHORT_NAMES.findIndex(n => name.includes(n) || n.includes(name));
+                    const color = sIdx >= 0 ? MEMBER_COLORS[sIdx] : '#3498db';
+
+                    reportsHtml += `<div class="cal-report-item" style="border-left-color:${color};">
+                        <div class="cal-report-name">${name} ${hours}</div>
+                        ${preview ? `<div class="cal-report-preview">${preview}</div>` : ''}
+                    </div>`;
+                });
+                detailContent.innerHTML = reportsHtml;
+            }
+        } catch (e) {
+            detailContent.innerHTML = '<div style="padding:12px;color:#e74c3c;font-size:.82rem;">보고서 불러오기 실패</div>';
         }
     }
 }
 
-let selectedDate  = '';
+let selectedDate   = '';
 let calendarEvents = {};
 let isFormVisible  = false;
 
-function toggleEventForm() {
-    const formFields = document.getElementById('event-form-fields');
-    isFormVisible = !isFormVisible;
-    formFields.style.display = isFormVisible ? 'block' : 'none';
-    
-    if (isFormVisible && !selectedDate) {
-        alert('Please select a date first');
-        formFields.style.display = 'none';
-        isFormVisible = false;
-    }
-}
-
-function cancelEventForm() {
-    document.getElementById('event-form-fields').style.display = 'none';
-    isFormVisible = false;
-    clearEventForm();
-}
-
+// 이벤트 폼 함수 (레거시 호환 — 현재 캘린더에서 미사용)
+function toggleEventForm() {}
+function cancelEventForm() {}
 function clearEventForm() {
     ['event-title','event-time','event-author','event-location','event-participants'].forEach(id => {
         const el = document.getElementById(id);
@@ -619,45 +601,8 @@ function clearEventForm() {
     const desc = document.getElementById('event-description');
     if (desc) desc.value = '';
 }
-
-function saveEvent() {
-    if (!selectedDate) { alert('Please select a date first'); return; }
-    
-    const title        = document.getElementById('event-title').value.trim();
-    const time         = document.getElementById('event-time').value;
-    const author       = document.getElementById('event-author').value.trim();
-    const location     = document.getElementById('event-location').value.trim();
-    const participants = document.getElementById('event-participants').value.trim();
-    const description  = document.getElementById('event-description').value.trim();
-    
-    if (!title)  { alert('Please enter an event title'); return; }
-    if (!author) { alert('Please enter the author/organizer name'); return; }
-    
-    if (!calendarEvents[selectedDate]) calendarEvents[selectedDate] = [];
-    calendarEvents[selectedDate].push({ title, time, author, location, participants, description });
-    
-    try {
-        localStorage.setItem('blesslab_calendar_events', JSON.stringify(calendarEvents));
-    } catch (e) { console.error('Failed to save:', e); }
-    
-    cancelEventForm();
-    showDatePanel(selectedDate);
-    alert('✅ Event saved successfully!');
-}
-
-function deleteEvent(index) {
-    if (confirm('Are you sure you want to delete this event?')) {
-        calendarEvents[selectedDate].splice(index, 1);
-        if (calendarEvents[selectedDate].length === 0) delete calendarEvents[selectedDate];
-        
-        try {
-            localStorage.setItem('blesslab_calendar_events', JSON.stringify(calendarEvents));
-        } catch (e) { console.error('Failed to save:', e); }
-        
-        showDatePanel(selectedDate);
-        alert('✅ Event deleted');
-    }
-}
+function saveEvent() {}
+function deleteEvent(index) {}
 
 function loadStoredEvents() {
     try {
