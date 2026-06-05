@@ -731,6 +731,230 @@ body {
     font-size: 12px;
 }
 
+/* ── Flutter 앱 스타일 주간/일일 카드 ─────────────────────────── */
+.weekly-card-top,
+.daily-card-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s;
+}
+
+.weekly-card-top:hover,
+.daily-card-top:hover {
+    background: #f8fafc;
+}
+
+/* 동그라미 아바타 */
+.weekly-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffffff;
+    flex-shrink: 0;
+}
+
+.weekly-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.weekly-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #2c3e50;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.weekly-week {
+    font-size: 0.78rem;
+    color: #7f8c8d;
+    margin-top: 1px;
+}
+
+/* 날짜 범위: 세로 배열로 잘림 없음 */
+.weekly-range {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    flex-shrink: 0;
+}
+
+.weekly-range-start,
+.weekly-range-end {
+    font-size: 0.78rem;
+    color: #7f8c8d;
+    white-space: nowrap;
+    background: #f0f2f5;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.weekly-range-sep {
+    font-size: 0.7rem;
+    color: #bdc3c7;
+    text-align: center;
+}
+
+.daily-hours {
+    font-size: 0.82rem;
+    color: #7f8c8d;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.weekly-toggle-icon {
+    font-size: 0.75rem;
+    color: #95a5a6;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+}
+
+/* 접힌/펼쳐진 본문 */
+.weekly-body {
+    display: none;
+    border-top: 1px solid #f0f2f5;
+    padding: 14px 16px 4px;
+    animation: fadeIn 0.18s ease;
+}
+
+.weekly-body.open {
+    display: block;
+}
+
+/* ── 전체 시간표 한눈에 보기 ──────────────────────────────────── */
+.full-tt-wrap {
+    padding: 0;
+}
+
+.full-tt-title {
+    padding: 14px 18px 10px;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.full-tt-title h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.full-tt-title p {
+    font-size: 0.78rem;
+    color: #7f8c8d;
+    margin-top: 2px;
+}
+
+.full-tt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 10px 0 10px;
+}
+
+.full-tt-table {
+    min-width: 560px;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+}
+
+.full-tt-table thead th {
+    background: #2c3e50;
+    color: #ffffff;
+    padding: 9px 8px;
+    text-align: center;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.full-tt-period-hd {
+    background: #34495e !important;
+    min-width: 70px;
+}
+
+.full-tt-period-cell {
+    background: #f8fafc;
+    text-align: center;
+    padding: 8px 6px;
+    border-bottom: 1px solid #e8ecf0;
+    border-right: 1px solid #e8ecf0;
+    vertical-align: middle;
+}
+
+.full-tt-period-name {
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 0.8rem;
+}
+
+.full-tt-period-time {
+    font-size: 0.7rem;
+    color: #7f8c8d;
+    margin-top: 2px;
+}
+
+.full-tt-empty {
+    background: #fafbfc;
+    border-bottom: 1px solid #e8ecf0;
+}
+
+.full-tt-cell {
+    padding: 6px 7px;
+    border-bottom: 1px solid #e8ecf0;
+    vertical-align: top;
+}
+
+.full-tt-entry {
+    background: #f0f7ff;
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-bottom: 4px;
+}
+
+.full-tt-entry:last-child {
+    margin-bottom: 0;
+}
+
+.full-tt-names {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-bottom: 4px;
+}
+
+.full-tt-badge {
+    display: inline-block;
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+.full-tt-course {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #2c3e50;
+    line-height: 1.35;
+}
+
+.full-tt-meta {
+    font-size: 0.68rem;
+    color: #7f8c8d;
+    margin-top: 2px;
+}
+
 /* ── 반응형: 태블릿 ───────────────────────────────────────────── */
 @media (max-width: 768px) {
     .app-root {

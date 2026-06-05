@@ -216,6 +216,19 @@
 
             <!-- ── 시간표 탭 ─────────────────────────────── -->
             <div id="tab-timetable" class="tab-pane">
+                <!-- 전체 시간표 토글 버튼 -->
+                <div style="margin-bottom:10px;">
+                    <button id="btn-full-tt" class="btn btn-secondary" onclick="toggleFullTimetable()" style="width:100%;">
+                        📊 전체 시간표 보기
+                    </button>
+                </div>
+                <!-- 전체 시간표 (접힘/펼침) -->
+                <div id="full-timetable-section" style="display:none; margin-bottom:14px;">
+                    <div class="card">
+                        <div id="full-timetable-display"></div>
+                    </div>
+                </div>
+                <!-- 멤버별 시간표 -->
                 <div class="card">
                     <div class="card-header">
                         <span class="card-icon">📅</span>

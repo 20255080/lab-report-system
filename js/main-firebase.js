@@ -469,16 +469,22 @@ async function searchDailyReports(studentId, startDate, endDate, container) {
     let html = '';
     reports.forEach(report => {
         const feedbacks = report.feedbacks || [];
+        const nameInitial = getNameInitial(report.student_name);
+        const avatarColor = getMemberColor(report.student_name);
+        const safeId = report.id.replace(/['"/]/g, '');
+
         html += `
-        <div class="result-card card">
-            <div class="result-card-header">
-                <div class="result-meta">
-                    <span class="result-date">📅 ${report.report_date}</span>
-                    <span class="result-name">👤 ${report.student_name}</span>
-                    <span class="result-hours">⏱ ${report.work_hours || '-'}</span>
+        <div class="result-card card daily-card">
+            <div class="daily-card-top" onclick="toggleDailyBody('${safeId}')">
+                <div class="weekly-avatar" style="background:${avatarColor}">${nameInitial}</div>
+                <div class="weekly-info">
+                    <div class="weekly-name">${escapeHtml(report.student_name)}</div>
+                    <div class="weekly-week">${report.report_date}</div>
                 </div>
+                <div class="daily-hours">⏱ ${escapeHtml(report.work_hours || '-')}</div>
+                <span class="weekly-toggle-icon" id="toggle-icon-${safeId}">▼</span>
             </div>
-            <div class="result-body">
+            <div class="weekly-body" id="weekly-body-${safeId}">
                 <div class="result-section">
                     <div class="result-label">업무 내용</div>
                     <pre class="result-pre">${escapeHtml(report.today_work || '')}</pre>
@@ -488,12 +494,28 @@ async function searchDailyReports(studentId, startDate, endDate, container) {
                     <div class="result-label">비고</div>
                     <pre class="result-pre">${escapeHtml(report.notes)}</pre>
                 </div>` : ''}
+                ${renderFeedbackBlock(feedbacks, report.id, 'daily', report.student_name, report.report_date)}
             </div>
-            ${renderFeedbackBlock(feedbacks, report.id, 'daily', report.student_name, report.report_date)}
         </div>`;
     });
 
     container.innerHTML = html;
+
+    // 첫 번째 카드 자동 펼치기
+    if (reports.length > 0) {
+        const firstId = reports[0].id.replace(/['"/]/g, '');
+        toggleDailyBody(firstId);
+    }
+}
+
+// 일일 카드 펼치기/접기
+function toggleDailyBody(id) {
+    const body = document.getElementById(`weekly-body-${id}`);
+    const icon = document.getElementById(`toggle-icon-${id}`);
+    if (!body) return;
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    if (icon) icon.textContent = isOpen ? '▼' : '▲';
 }
 
 // ── 주간 요약 검색 결과 렌더링 ────────────────────────────────
@@ -515,29 +537,84 @@ async function searchWeeklySummaries(studentId, container) {
         }));
     } catch (e) { /* skip */ }
 
+    // Flutter 앱과 동일한 카드형 레이아웃
     let html = '';
     summaries.forEach(summary => {
         const feedbacks = summary.feedbacks || [];
+        const nameInitial = getNameInitial(summary.student_name);
+        const avatarColor = getMemberColor(summary.student_name);
+        const safeId = summary.id.replace(/['"/]/g, '');
+
         html += `
-        <div class="result-card card">
-            <div class="result-card-header">
-                <div class="result-meta">
-                    <span class="result-date">📅 ${summary.year}년 ${summary.week}주차</span>
-                    <span class="result-name">👤 ${summary.student_name}</span>
-                    <span class="result-hours">📆 ${summary.week_range}</span>
+        <div class="result-card card weekly-card">
+            <!-- 카드 헤더: 아바타 + 이름 + 주차/날짜 -->
+            <div class="weekly-card-top" onclick="toggleWeeklyBody('${safeId}')">
+                <div class="weekly-avatar" style="background:${avatarColor}">${nameInitial}</div>
+                <div class="weekly-info">
+                    <div class="weekly-name">${escapeHtml(summary.student_name)}</div>
+                    <div class="weekly-week">${summary.year}년 제${summary.week}주</div>
                 </div>
+                <div class="weekly-range">
+                    <div class="weekly-range-start">${(summary.week_range || '').split('~')[0] || ''}</div>
+                    <div class="weekly-range-sep">~</div>
+                    <div class="weekly-range-end">${(summary.week_range || '').split('~')[1] || ''}</div>
+                </div>
+                <span class="weekly-toggle-icon" id="toggle-icon-${safeId}">▼</span>
             </div>
-            <div class="result-body">
+            <!-- 펼쳐지는 본문 -->
+            <div class="weekly-body" id="weekly-body-${safeId}">
                 <div class="result-section">
                     <div class="result-label">주간 업무 요약</div>
-                    <pre class="result-pre">${escapeHtml(summary.summary || '')}</pre>
+                    <pre class="result-pre">${escapeHtml(summary.summary || '(내용 없음)')}</pre>
                 </div>
+                ${renderFeedbackBlock(feedbacks, summary.id, 'weekly', summary.student_name, `${summary.year}년 ${summary.week}주차`)}
             </div>
-            ${renderFeedbackBlock(feedbacks, summary.id, 'weekly', summary.student_name, `${summary.year}년 ${summary.week}주차`)}
         </div>`;
     });
 
     container.innerHTML = html;
+
+    // 첫 번째 카드 자동 펼치기
+    if (summaries.length > 0) {
+        const firstId = summaries[0].id.replace(/['"/]/g, '');
+        toggleWeeklyBody(firstId);
+    }
+}
+
+// 주간 카드 펼치기/접기
+function toggleWeeklyBody(id) {
+    const body = document.getElementById(`weekly-body-${id}`);
+    const icon = document.getElementById(`toggle-icon-${id}`);
+    if (!body) return;
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    if (icon) icon.textContent = isOpen ? '▼' : '▲';
+}
+
+// 멤버별 아바타 이니셜
+function getNameInitial(name) {
+    if (!name) return '?';
+    // 한글 성씨 추출 (괄호 안 한글 우선)
+    const korMatch = name.match(/[가-힣]/);
+    if (korMatch) return korMatch[0];
+    return name.trim()[0].toUpperCase();
+}
+
+// 멤버별 고정 색상 (Flutter 앱 MEMBER_COLORS와 동일)
+const MEMBER_COLOR_MAP = {
+    'Minkee Cho (조민기)': '#3498db',
+    'Lee Hye-bin (이혜빈)': '#27ae60',
+    'Yoo Sung-il (유성일)': '#e74c3c',
+    'Kim Su-jin (김수진)': '#9b59b6',
+    'Kim Dong-woo (김동우)': '#f39c12',
+    'Song Da-ye (송다예)': '#1abc9c',
+    'Kim Dong-jin (김동진)': '#e67e22',
+    'Saqib': '#2980b9',
+    'Jo Yu-kyung (조유경)': '#8e44ad'
+};
+
+function getMemberColor(name) {
+    return MEMBER_COLOR_MAP[name] || '#95a5a6';
 }
 
 // ── 피드백 블록 HTML 생성 ─────────────────────────────────────

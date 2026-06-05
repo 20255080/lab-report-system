@@ -702,3 +702,133 @@ window.addEventListener('load', () => {
         });
     }
 });
+
+// ── 전체 시간표 한눈에 보기 ──────────────────────────────────────
+// index.html 시간표 탭 내 "전체 보기" 버튼이 호출
+function renderFullTimetable() {
+    const container = document.getElementById('full-timetable-display');
+    if (!container) return;
+
+    const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    const DAY_KO  = { Mon: '월', Tue: '화', Wed: '수', Thu: '목', Fri: '금' };
+    const PERIODS = [
+        { label: '1교시', time: '09:00-10:15' },
+        { label: '2교시', time: '10:30-11:45' },
+        { label: '3교시', time: '13:00-14:15' },
+        { label: '4교시', time: '14:30-15:45' },
+        { label: '5교시', time: '16:00-17:15' },
+    ];
+
+    // 멤버 단축 이름 (표 안 표시용)
+    const SHORT = {
+        'Kim Dong-jin (김동진)':  '동진',
+        'Kim Dong-woo (김동우)':  '동우',
+        'Saqib':                  'Saqib',
+        'Kim Su-jin (김수진)':    '수진',
+        'Jo Yu-kyung (조유경)':   '유경',
+        'Minkee Cho (조민기)':    '민기',
+        'Lee Hye-bin (이혜빈)':   '혜빈',
+        'Yoo Sung-il (유성일)':   '성일',
+        'Song Da-ye (송다예)':    '다예',
+    };
+
+    // day × period → 수업 목록 맵 구성
+    const cellMap = {};
+    DAYS.forEach(d => PERIODS.forEach(p => { cellMap[`${d}_${p.time}`] = []; }));
+
+    Object.entries(timetableData.memberSchedules).forEach(([memberName, sched]) => {
+        sched.forEach(cls => {
+            const key = `${cls.day}_${cls.time}`;
+            if (cellMap[key] !== undefined) {
+                cellMap[key].push({ member: memberName, course: cls.course, room: cls.room, prof: cls.prof });
+            }
+        });
+    });
+
+    // 헤더
+    let html = `
+    <div class="full-tt-wrap">
+        <div class="full-tt-title">
+            <h3>BLESS 전체 시간표</h3>
+            <p>2026년 1학기 (3.2 ~ 6.13)</p>
+        </div>
+        <div class="full-tt-scroll">
+        <table class="full-tt-table">
+            <thead>
+                <tr>
+                    <th class="full-tt-period-hd">교시</th>
+                    ${DAYS.map(d => `<th>${DAY_KO[d]} (${d})</th>`).join('')}
+                </tr>
+            </thead>
+            <tbody>`;
+
+    PERIODS.forEach(period => {
+        html += `<tr>
+            <td class="full-tt-period-cell">
+                <div class="full-tt-period-name">${period.label}</div>
+                <div class="full-tt-period-time">${period.time}</div>
+            </td>`;
+
+        DAYS.forEach(day => {
+            const classes = cellMap[`${day}_${period.time}`] || [];
+            if (classes.length === 0) {
+                html += `<td class="full-tt-empty"></td>`;
+            } else {
+                html += `<td class="full-tt-cell">`;
+                // 같은 강의인지 그룹화
+                const grouped = {};
+                classes.forEach(c => {
+                    const key = c.course;
+                    if (!grouped[key]) grouped[key] = { course: c.course, room: c.room, prof: c.prof, members: [] };
+                    grouped[key].members.push(c.member);
+                });
+                Object.values(grouped).forEach(g => {
+                    html += `<div class="full-tt-entry">`;
+                    html += `<div class="full-tt-names">${g.members.map(m =>
+                        `<span class="full-tt-badge" style="background:${getMemberColorSafe(m)}">${SHORT[m] || m}</span>`
+                    ).join('')}</div>`;
+                    html += `<div class="full-tt-course">${g.course}</div>`;
+                    html += `<div class="full-tt-meta">${g.room} · ${g.prof}</div>`;
+                    html += `</div>`;
+                });
+                html += `</td>`;
+            }
+        });
+        html += `</tr>`;
+    });
+
+    html += `</tbody></table></div></div>`;
+    container.innerHTML = html;
+}
+
+// 색상 맵 (main-firebase.js 로드 전일 수 있으므로 독립 사본)
+function getMemberColorSafe(name) {
+    const MAP = {
+        'Kim Dong-jin (김동진)': '#e67e22',
+        'Kim Dong-woo (김동우)': '#f39c12',
+        'Saqib':                 '#2980b9',
+        'Kim Su-jin (김수진)':   '#9b59b6',
+        'Jo Yu-kyung (조유경)':  '#8e44ad',
+        'Minkee Cho (조민기)':   '#3498db',
+        'Lee Hye-bin (이혜빈)':  '#27ae60',
+        'Yoo Sung-il (유성일)':  '#e74c3c',
+        'Song Da-ye (송다예)':   '#1abc9c',
+    };
+    return MAP[name] || '#95a5a6';
+}
+
+// 전체 시간표 토글 (탭 내 버튼용)
+function toggleFullTimetable() {
+    const wrap = document.getElementById('full-timetable-section');
+    const btn  = document.getElementById('btn-full-tt');
+    if (!wrap) return;
+    const isOpen = wrap.style.display !== 'none';
+    if (isOpen) {
+        wrap.style.display = 'none';
+        if (btn) btn.textContent = '📊 전체 시간표 보기';
+    } else {
+        wrap.style.display = 'block';
+        if (btn) btn.textContent = '📊 전체 시간표 닫기';
+        renderFullTimetable();
+    }
+}
