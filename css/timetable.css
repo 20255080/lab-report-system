@@ -1,0 +1,813 @@
+/* Timetable & Calendar Styles */
+
+/* === TIMETABLE CONTROLS === */
+.timetable-controls {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.timetable-controls .form-group {
+    margin-bottom: 0;
+}
+
+.timetable-controls label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.timetable-controls select {
+    width: 100%;
+    max-width: 300px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1em;
+}
+
+/* === CLASSIC TIMETABLE (IMAGE STYLE) === */
+.timetable-image-style {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+/* 모바일 스크롤 안내 */
+.timetable-scroll-hint {
+    display: none;
+    text-align: center;
+    padding: 10px;
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    border-radius: 8px;
+    margin: 10px 15px;
+    color: #856404;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.timetable-scroll-hint::before {
+    content: "👈 ";
+    font-size: 1.2em;
+}
+
+.timetable-scroll-hint::after {
+    content: " 👉";
+    font-size: 1.2em;
+}
+
+.timetable-title {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.timetable-title h3 {
+    margin: 0 0 5px 0;
+    font-size: 2em;
+    font-weight: 700;
+}
+
+.timetable-title p {
+    margin: 0;
+    font-size: 1.2em;
+    color: #666;
+}
+
+.timetable-classic {
+    width: 100%;
+    border-collapse: collapse;
+    border: 2px solid #333;
+}
+
+.timetable-classic thead th {
+    background: #2C3E50; /* 전문적인 진한 청회색 (Dark Slate) */
+    color: #FFFFFF;
+    padding: 12px;
+    font-weight: 600;
+    text-align: center;
+    border: 1px solid #333;
+}
+
+.timetable-classic thead th.period-header {
+    background: #34495E; /* 약간 밝은 청회색 */
+    color: #FFFFFF;
+}
+
+.timetable-classic tbody td {
+    border: 1px solid #333;
+    padding: 12px;
+    vertical-align: top;
+    background: white;
+    text-align: center;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.timetable-classic .period-cell {
+    background: #ECF0F1; /* 연한 회색 */
+    font-weight: 600;
+    text-align: center;
+    width: 130px;
+}
+
+.timetable-classic .merged-cell {
+    background: #FFF;
+}
+
+/* Student name colors */
+.student {
+    font-weight: 700;
+    display: inline-block;
+    margin: 2px;
+}
+
+.student.yellow {
+    color: #FF8C00; /* 동진 - 진한 오렌지 (Dark Orange) */
+}
+
+.student.blue {
+    color: #0066CC; /* Saqib - 진한 파랑 (Deep Blue) */
+}
+
+.student.green {
+    color: #228B22; /* 동우 - 포레스트 그린 (Forest Green) */
+}
+
+.student.pink {
+    color: #DC143C; /* 수진 - 크림슨 (Crimson) */
+}
+
+.student.purple {
+    color: #6A5ACD; /* 유경 - 슬레이트 블루 (Slate Blue) */
+}
+
+.timetable-classic small {
+    display: block;
+    font-size: 0.85em;
+    color: #666;
+    margin-top: 4px;
+}
+
+/* Equal width for day columns */
+.timetable-day-cell {
+    width: 16.66%; /* 100% / 6 columns (Mon-Fri + Thu split) */
+}
+
+/* Merged cell for continuous classes */
+.timetable-classic .merged-cell {
+    background: #FFF;
+    vertical-align: middle !important;
+    text-align: center !important;
+}
+
+.timetable-classic .merged-vertical {
+    vertical-align: middle;
+    text-align: center;
+}
+
+/* === MEMBER SCHEDULE TABLE === */
+.member-schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.member-schedule-table thead th {
+    background: #2C3E50; /* 전문적인 진한 청회색 */
+    color: #FFFFFF;
+    padding: 15px;
+    font-weight: 600;
+    text-align: left;
+    border: 1px solid #333;
+}
+
+.member-schedule-table tbody td {
+    border: 1px solid #ddd;
+    padding: 12px;
+}
+
+.member-schedule-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+/* 카드 리스트는 기본적으로 숨김 (데스크톱) */
+.schedule-card-list {
+    display: none;
+}
+
+/* === WORK REPORT CALENDAR (IMAGE STYLE) === */
+.calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #e9ecef;
+    border-radius: 8px;
+}
+
+.calendar-month-title {
+    margin: 0;
+    font-size: 1.4em;
+    font-weight: 600;
+    color: #333;
+}
+
+.nav-btn-calendar {
+    padding: 10px 20px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.nav-btn-calendar:hover {
+    background: #5a6268;
+}
+
+.work-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0;
+    border: 2px solid #333;
+    background: white;
+}
+
+.work-weekday {
+    background: #e9ecef;
+    color: #000;
+    padding: 12px;
+    text-align: center;
+    font-weight: 600;
+    border: 1px solid #333;
+    font-size: 0.9em;
+}
+
+.work-calendar-cell {
+    min-height: 100px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    background: white;
+    position: relative;
+}
+
+.work-calendar-cell.clickable-cell {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.work-calendar-cell.clickable-cell:hover {
+    background: #f0f8ff;
+    border-color: #4A90E2;
+    transform: scale(1.02);
+}
+
+.work-calendar-cell.empty {
+    background: #f9f9f9;
+}
+
+.work-calendar-cell.today-cell {
+    background: #fff5f5;
+    border: 2px solid #e74c3c;
+}
+
+.work-calendar-cell.out-semester {
+    opacity: 0.4;
+}
+
+.work-day-number {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #333;
+    text-align: left;
+    margin-bottom: 6px;
+}
+
+.work-calendar-cell.today-cell .work-day-number {
+    color: #e74c3c;
+}
+
+/* === EVENT PREVIEW IN CALENDAR CELLS === */
+.event-preview {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.preview-item {
+    font-size: 0.7em;
+    padding: 2px 4px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.preview-time {
+    font-weight: 700;
+    margin-right: 3px;
+}
+
+.preview-title {
+    font-weight: 500;
+}
+
+.preview-more {
+    font-size: 0.65em;
+    color: #666;
+    font-style: italic;
+    text-align: center;
+    padding: 2px;
+    margin-top: 2px;
+}
+
+/* === EVENT FORM SECTION (Below Calendar) === */
+.event-form-section {
+    margin-top: 30px;
+    padding: 20px;
+    background: #fffbf0;
+    border: 2px solid #e8e8e8;
+    border-radius: 8px;
+}
+
+.event-form-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #4A90E2;
+}
+
+.event-form-header h3 {
+    margin: 0;
+    color: #4A90E2;
+    font-size: 1.3em;
+}
+
+/* Existing Events Display */
+.event-list-area {
+    margin-bottom: 20px;
+}
+
+.event-list-area h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.1em;
+}
+
+#events-display {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.event-card {
+    padding: 15px;
+    background: white;
+    border: 1px solid #ddd;
+    border-left: 4px solid #4A90E2;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.event-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.event-card-header strong {
+    color: #4A90E2;
+    font-size: 1em;
+}
+
+.btn-delete-small {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-delete-small:hover {
+    background: #c0392b;
+}
+
+.event-card-title {
+    font-weight: 600;
+    font-size: 1.05em;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+.event-card-info {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.event-card-desc {
+    font-size: 0.9em;
+    color: #555;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed #ddd;
+}
+
+/* Event Input Form */
+.event-input-form {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
+.btn-add-event {
+    width: 100%;
+    padding: 14px;
+    background: #4A90E2;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-add-event:hover {
+    background: #357ABD;
+}
+
+.event-form-fields {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #e8e8e8;
+}
+
+.form-row {
+    margin-bottom: 18px;
+}
+
+.form-row label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95em;
+}
+
+.form-row input,
+.form-row textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1em;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.form-row input:focus,
+.form-row textarea:focus {
+    outline: none;
+    border-color: #4A90E2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+.form-row textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.btn-save-event,
+.btn-cancel-event {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-save-event {
+    background: #4A90E2;
+    color: white;
+}
+
+.btn-save-event:hover {
+    background: #357ABD;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(74, 144, 226, 0.3);
+}
+
+.btn-cancel-event {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.btn-cancel-event:hover {
+    background: #ccc;
+}
+
+/* Responsive - Tablet */
+@media (max-width: 1024px) {
+    .timetable-classic {
+        font-size: 0.9em;
+    }
+    
+    .member-schedule-table {
+        font-size: 0.9em;
+    }
+}
+
+/* Responsive - Mobile */
+@media (max-width: 768px) {
+    .timetable-controls {
+        padding: 18px 15px;
+    }
+    
+    .timetable-controls label {
+        font-size: 1em;
+        font-weight: 600;
+    }
+    
+    .timetable-controls select {
+        font-size: 16px;
+        padding: 14px 12px;
+    }
+    
+    /* 스크롤 안내 표시 */
+    .timetable-scroll-hint {
+        display: block;
+        font-size: 0.85em;
+        padding: 10px;
+    }
+    
+    .timetable-image-style {
+        padding: 10px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -15px;
+    }
+    
+    .timetable-title h3 {
+        font-size: 1.2em;
+        margin-bottom: 3px;
+    }
+    
+    .timetable-title p {
+        font-size: 0.8em;
+    }
+    
+    /* 시간표 테이블 - 아이폰 15에 맞춰 더 작게! */
+    .timetable-classic {
+        font-size: 0.65em; /* 0.7em → 0.65em */
+        min-width: 750px; /* 800px → 750px */
+        margin: 0 auto;
+    }
+    
+    .timetable-classic th,
+    .timetable-classic td {
+        padding: 5px 2px; /* 6px 3px → 5px 2px */
+        line-height: 1.2;
+    }
+    
+    .period-cell {
+        font-size: 1em;
+        padding: 5px 3px !important;
+        white-space: nowrap;
+        min-width: 50px;
+    }
+    
+    .timetable-day-cell {
+        min-width: 110px; /* 120px → 110px */
+        font-size: 1em;
+    }
+    
+    .timetable-day-cell br {
+        line-height: 1.1;
+    }
+    
+    .timetable-day-cell small {
+        font-size: 0.85em; /* 0.9em → 0.85em */
+        line-height: 1.1;
+        display: block;
+        margin-top: 2px;
+    }
+    
+    .student {
+        font-size: 1.05em; /* 1.1em → 1.05em */
+        padding: 2px 5px; /* 2px 6px → 2px 5px */
+        display: inline-block;
+        margin: 1px;
+    }
+    
+    /* 개별 스케줄 - 리스트 카드로 */
+    .member-schedule-table {
+        display: none; /* 테이블 숨기기 */
+    }
+    
+    /* 카드 스타일 추가 */
+    .schedule-card-list {
+        display: block;
+    }
+    
+    .schedule-card {
+        background: white;
+        border: 1px solid #e1e8ed;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    
+    .schedule-card-day {
+        display: inline-block;
+        background: #3498db;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.9em;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    
+    .schedule-card-time {
+        font-size: 1.1em;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 8px;
+    }
+    
+    .schedule-card-course {
+        font-size: 1em;
+        color: #34495e;
+        margin-bottom: 6px;
+        font-weight: 500;
+    }
+    
+    .schedule-card-details {
+        font-size: 0.9em;
+        color: #7f8c8d;
+        line-height: 1.6;
+    }
+    
+    /* 캘린더 */
+    .calendar-nav {
+        flex-direction: column;
+        gap: 12px;
+        padding: 15px;
+    }
+    
+    .calendar-month-title {
+        font-size: 1.3em;
+        font-weight: 600;
+    }
+    
+    .nav-btn-calendar {
+        width: 100%;
+        padding: 14px;
+        font-size: 1em;
+        border-radius: 8px;
+    }
+    
+    .work-calendar-table {
+        font-size: 0.9em;
+        margin: 0 10px;
+    }
+    
+    .work-calendar-cell {
+        min-height: 70px;
+        padding: 6px 3px;
+    }
+    
+    .work-day-number {
+        font-size: 1em;
+        font-weight: 600;
+    }
+    
+    .work-student-name {
+        font-size: 0.8em;
+        margin-top: 3px;
+    }
+    
+    .work-time-badge {
+        font-size: 0.75em;
+        padding: 2px 5px;
+        margin-top: 2px;
+    }
+}
+
+/* Responsive - Small Mobile (iPhone 15: 390px) */
+@media (max-width: 480px) {
+    .timetable-controls {
+        padding: 15px 12px;
+    }
+    
+    .timetable-image-style {
+        padding: 8px;
+    }
+    
+    .timetable-title h3 {
+        font-size: 1.1em;
+    }
+    
+    .timetable-title p {
+        font-size: 0.75em;
+    }
+    
+    .timetable-scroll-hint {
+        font-size: 0.85em;
+        padding: 8px;
+        margin: 8px 12px;
+    }
+    
+    /* 작은 화면에서 더 작게 */
+    .timetable-classic {
+        font-size: 0.6em; /* 0.65em → 0.6em */
+        min-width: 700px; /* 750px → 700px */
+    }
+    
+    .timetable-classic th,
+    .timetable-classic td {
+        padding: 4px 2px; /* 5px 2px → 4px 2px */
+    }
+    
+    .period-cell {
+        font-size: 1em;
+        white-space: nowrap;
+        padding: 4px 2px !important;
+    }
+    
+    .timetable-day-cell {
+        min-width: 100px; /* 110px → 100px */
+    }
+    
+    .student {
+        font-size: 1.1em; /* 약간 크게 유지 (가독성) */
+        padding: 2px 4px;
+    }
+    
+    /* 개별 스케줄 카드 */
+    .schedule-card {
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+    
+    .schedule-card-time {
+        font-size: 1em;
+    }
+    
+    .schedule-card-course {
+        font-size: 0.95em;
+    }
+    
+    .calendar-month-title {
+        font-size: 1.1em;
+    }
+    
+    .nav-btn-calendar {
+        padding: 12px;
+        font-size: 0.95em;
+    }
+    
+    .work-calendar-cell {
+        min-height: 60px;
+        padding: 5px 2px;
+    }
+    
+    .work-day-number {
+        font-size: 0.9em;
+    }
+    
+    .work-student-name {
+        font-size: 0.75em;
+    }
+}
+

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0">
+    <title>BLESS Lab Report System</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="연구실 업무 보고 및 시간표 관리 시스템">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BLESS Lab">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.svg">
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/timetable.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    
+    <!-- Firebase 설정 (직접 포함) -->
+    <script>
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyCW_KaEpbBhgyoTPvb_koMrntlInu35ak4",
+            authDomain: "bless-lab.firebaseapp.com",
+            projectId: "bless-lab",
+            storageBucket: "bless-lab.firebasestorage.app",
+            messagingSenderId: "492042770903",
+            appId: "1:492042770903:web:d75a65938f9601b2f19392",
+            measurementId: "G-0G6HQTLZ3L"
+        };
+        
+        // Firebase 초기화
+        firebase.initializeApp(firebaseConfig);
+        
+        // Firestore 데이터베이스 참조
+        const db = firebase.firestore();
+        
+        // Firebase Storage 참조
+        const storage = firebase.storage();
+        const storageRef = storage.ref();
+        
+        console.log('✅ Firebase 초기화 완료 (index.html)');
+    </script>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase DB 헬퍼 -->
+    <script src="js/firebase-db.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Lab Work Report System</h1>
+            <p class="subtitle">Biotechnology Laboratory for Environmental Sustainability and Survivability (BLESS)</p>
+        </header>
+
+        <nav class="tab-menu">
+            <button class="tab-btn active" data-tab="student">Submit Report</button>
+            <button class="tab-btn" data-tab="professor">View All</button>
+            <button class="tab-btn" data-tab="timetable">Timetable</button>
+            <button class="tab-btn" data-tab="calendar">Calendar</button>
+        </nav>
+
+        <!-- 학생 보고 입력 탭 -->
+        <div id="student-tab" class="tab-content active">
+            <div class="form-section">
+                <h2>Daily Work Report</h2>
+                
+                <div class="form-group">
+                    <label for="student-select">Name *</label>
+                    <select id="student-select" required>
+                        <option value="">Select</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="report-date">Date *</label>
+                    <input type="date" id="report-date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="today-work">Work Description *</label>
+                    <textarea id="today-work" rows="8" placeholder="Enter detailed description of work performed" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="work-hours">Hours Spent *</label>
+                    <input type="text" id="work-hours" placeholder="e.g., 3 hours, 2h morning + 4h afternoon" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" rows="3" placeholder="Enter any special notes if applicable"></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button id="save-daily-btn" class="btn btn-primary">Save</button>
+                    <button id="load-today-btn" class="btn btn-secondary">Load Today's Work</button>
+                </div>
+
+                <!-- 피드백 확인 영역 -->
+                <div id="daily-feedback-container" class="feedback-container" style="display: none;">
+                    <h3>Professor Feedback</h3>
+                    <div id="daily-feedback-content" class="feedback-content"></div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h2>Weekly Work Report</h2>
+                
+                <div class="form-group">
+                    <label for="weekly-student-select">Name *</label>
+                    <select id="weekly-student-select" required>
+                        <option value="">Select</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="weekly-date">Week Reference Date *</label>
+                    <input type="date" id="weekly-date" required>
+                    <small id="week-info" class="info-text"></small>
+                </div>
+
+                <div class="form-group">
+                    <label for="weekly-summary">Weekly Work Summary *</label>
+                    <textarea id="weekly-summary" rows="8" placeholder="Enter the main work performed this week" required></textarea>
+                </div>
+
+                <div class="button-group">
+                    <button id="save-weekly-btn" class="btn btn-primary">Save</button>
+                    <button id="load-weekly-btn" class="btn btn-secondary">Load This Week's Work</button>
+                </div>
+
+                <!-- 피드백 확인 영역 -->
+                <div id="weekly-feedback-container" class="feedback-container" style="display: none;">
+                    <h3>Professor Feedback</h3>
+                    <div id="weekly-feedback-content" class="feedback-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 교수 조회 탭 -->
+        <div id="professor-tab" class="tab-content">
+            <div class="form-section">
+                <h2>View Work Records</h2>
+                
+                <div class="filter-group">
+                    <div class="form-group">
+                        <label for="view-student-select">Select Member *</label>
+                        <select id="view-student-select" required>
+                            <option value="">All Members</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="view-type">View Type *</label>
+                        <select id="view-type" required>
+                            <option value="daily">Daily Report</option>
+                            <option value="weekly">Weekly Summary</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="date-filter-group">
+                        <label for="view-start-date">Start Date</label>
+                        <input type="date" id="view-start-date">
+                    </div>
+
+                    <div class="form-group" id="date-filter-group-2">
+                        <label for="view-end-date">End Date</label>
+                        <input type="date" id="view-end-date">
+                    </div>
+
+                    <button id="search-btn" class="btn btn-primary">Search</button>
+                </div>
+
+                <div id="results-container">
+                    <div class="no-data">Select search criteria and click the Search button</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timetable Tab -->
+        <div id="timetable-tab" class="tab-content">
+            <div class="form-section">
+                <h2>BLESS Timetable - 1st Semester, 2026</h2>
+                
+                <div class="timetable-controls">
+                    <div class="form-group">
+                        <label for="member-filter">Select Member</label>
+                        <select id="member-filter">
+                            <option value="">All Members</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="timetable-container">
+                    <!-- Timetable image will be rendered here -->
+                    <div id="timetable-display"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Calendar Tab -->
+        <div id="calendar-tab" class="tab-content">
+            <div class="form-section">
+                <h2>Work Report Calendar</h2>
+                
+                <div class="calendar-container">
+                    <!-- Monthly calendar will be rendered here -->
+                    <div id="monthly-calendar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript는 Firebase SDK 이후에 로드 -->
+    <script src="js/main-firebase.js"></script>
+    <script src="js/timetable.js"></script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then((registration) => {
+                        console.log('✅ Service Worker registered:', registration.scope);
+                    })
+                    .catch((error) => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
+        
+        // PWA Install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('💡 PWA can be installed');
+        });
+    </script>
+</body>
+</html>
